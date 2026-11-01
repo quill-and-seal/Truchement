@@ -16,7 +16,8 @@
     },
     "Notify": {
       "Failed": "Truchement n'a pas pu traduire",
-      "Done": "Traduction terminée"
+      "Done": "Traduction terminée",
+      "Nothing": "Rien de reconnu à traduire"
     },
     "Controls": {
       "Translate": "Traduire (Truchement)"

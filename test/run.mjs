@@ -47,3 +47,8 @@ for (const spell of SPELLS) {
 }
 
 console.log(`\nCouverture sans moteur neuronal : ${covered}/${total} phrases (${Math.round((covered / total) * 100)} %)`);
+
+// Cas réel : bloc de stats importé (enrichers dnd5e).
+const eye = `<p><em>Ranged Attack Roll:</em> [[/attack extended]], range 150 ft. <em>Hit:</em> [[/damage 1d8+3 psychic]] Psychic damage.</p><p>Bonus equals your spell attack modifier, range 150 ft. Hit: 1d8 + 3 + the spell's level Psychic damage.</p>`;
+const r = await translateHtml(eye);
+console.log(`\n=== Eye Ray → ${translateName("Eye Ray")} | ${translateName("Aberrant Spirit (Beholderkin)")} ===\n${r.html}`);

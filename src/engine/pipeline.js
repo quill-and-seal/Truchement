@@ -3,6 +3,7 @@
 
 import { TERMS, NAMES } from "./glossary.js";
 import { matchPattern } from "./patterns.js";
+import { translateFragments } from "./fragments.js";
 
 // Couche 1 : mémoire de traduction (phrases déjà connues, exactes).
 // En jeu, elle sera aussi alimentée par le cache des traductions passées.
@@ -50,17 +51,26 @@ export async function translateSentence(sentence, { nmt } = {}) {
     const raw = await nmt(masked);
     if (raw) return { text: restoreTerms(raw, kept), layer: "neuronal" };
   }
+
+  // Couche 5 : fragments connus (termes de règles, blocs de stats).
+  const frag = translateFragments(trimmed);
+  if (frag) return { text: frag, layer: "fragments" };
+
   return { text: trimmed, layer: "non traduit", masked };
 }
 
-// Traduit un fragment HTML : seuls les nœuds texte sont traduits,
-// les balises et les liens @UUID[...]{...} restent intacts.
+// Éléments à ne jamais traduire : balises HTML, liens @UUID[...]{...},
+// références &Reference[...]{...} et jets en ligne [[/attack]], [[/damage …]].
+const PROTECTED = /(<[^>]+>|[@&]\w+\[[^\]]*\](?:\{[^}]*\})?|\[\[[^\]]*\]\](?:\{[^}]*\})?)/;
+const isProtected = (s) => s.startsWith("<") || s.startsWith("@") || s.startsWith("&") || s.startsWith("[[");
+
+// Traduit un fragment HTML : seuls les nœuds texte sont traduits.
 export async function translateHtml(html, opts = {}) {
-  const parts = html.split(/(<[^>]+>|@\w+\[[^\]]*\](?:\{[^}]*\})?)/);
+  const parts = html.split(PROTECTED);
   const report = [];
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    if (!part || part.startsWith("<") || part.startsWith("@") || !part.trim()) continue;
+    if (!part || isProtected(part) || !part.trim()) continue;
     const lead = part.match(/^\s*/)[0];
     const trail = part.match(/\s*$/)[0];
     const out = [];
@@ -74,6 +84,10 @@ export async function translateHtml(html, opts = {}) {
   return { html: parts.join(""), report };
 }
 
+// "Aberrant Spirit (Beholderkin)" : on essaie le nom entier, puis chaque partie.
 export function translateName(name) {
-  return NAMES[name] ?? null;
+  if (NAMES[name]) return NAMES[name];
+  const m = name.match(/^(.+?)\s*\((.+)\)$/);
+  if (m && NAMES[m[1]]) return `${NAMES[m[1]]} (${NAMES[m[2]] ?? m[2]})`;
+  return null;
 }

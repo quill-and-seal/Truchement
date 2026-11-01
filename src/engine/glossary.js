@@ -124,6 +124,11 @@ export const NAMES = {
   Sleep: "Sommeil",
   Thaumaturgy: "Thaumaturgie",
   Thunderwave: "Vague tonnante",
+  // Capacités et créatures
+  "Aberrant Spirit": "Esprit aberrant",
+  "Breath Weapon": "Souffle",
+  "Eye Ray": "Rayon oculaire",
+  Multiattack: "Attaques multiples",
   // Armes
   Battleaxe: "Hache d'armes",
   Club: "Gourdin",
