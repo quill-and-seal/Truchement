@@ -28,7 +28,7 @@ La bascule s'applique aussi aux objets d'un acteur et aux pages d'un journal, sa
 
 **Alt+clic** sur un libellé traduit de l'interface (MJ) : saisir sa traduction à la main. La correction est enregistrée dans le monde, partagée avec les joueurs, et prime sur le modèle.
 
-**Drapeau** à côté du badge (MJ) : signaler un problème de traduction. Truchement capture la fiche en FR puis en EN et envoie les captures, les textes et une remarque facultative au relais de signalement, qui crée une issue `[Traduction] Nom — Type` dans le dépôt privé `quill-and-seal/truchement-reports` (ou y ajoute un commentaire si elle existe déjà). Aucun compte GitHub n'est nécessaire. Le relais est décrit dans [`relay/README.md`](relay/README.md).
+**Drapeau** à côté du badge (MJ) : signaler un problème de traduction. Truchement capture la fiche en FR puis en EN et envoie les captures, les textes et une remarque facultative au relais de signalement, qui crée une issue `[Traduction] Nom — Type` dans le dépôt privé `quill-and-seal/truchement-reports` (ou y ajoute un commentaire si elle existe déjà). Aucun compte GitHub n'est nécessaire. Le relais (serveur + mise à jour automatique) se trouve dans le dépôt privé `quill-and-seal/truchement-reports`.
 
 Un libellé traduit trop long pour sa place est réduit (jusqu'à 70 %), puis coupé avec « … » ; le texte complet reste en infobulle.
 
