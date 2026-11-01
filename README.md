@@ -70,6 +70,10 @@ node test/run.mjs
 
 Le banc d'essai utilise un faux modèle : il vérifie les gabarits, le cache, la protection des jets en ligne et l'annotation des distances.
 
+## Historique
+
+Voir [CHANGELOG.md](CHANGELOG.md).
+
 ## Publier une version
 
-Créer une release GitHub avec un tag `vX.Y.Z` : le workflow `release.yml` met à jour le manifeste et attache `module.json` et `module.zip`.
+Ajouter la version dans `CHANGELOG.md`, puis créer une release GitHub avec un tag `vX.Y.Z` : le workflow `release.yml` met à jour le manifeste et attache `module.json` et `module.zip`.
