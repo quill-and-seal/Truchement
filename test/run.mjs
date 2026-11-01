@@ -1,7 +1,18 @@
 // Banc d'essai : node test/run.mjs
 // Textes de sorts au format du SRD 5.2 (CC-BY 4.0).
+//
+// Le vrai modèle tourne dans le navigateur (worker transformers.js). Ici on
+// branche un faux modèle qui marque les phrases « [NMT] … » : on vérifie
+// ce que les gabarits traitent seuls et ce qui part au modèle.
 
-import { translateHtml, translateName } from "../src/engine/pipeline.js";
+import { translateHtml, translateName, CACHE } from "../src/engine/pipeline.js";
+
+let calls = 0;
+const fakeNmt = async (texts) => {
+  calls++;
+  return texts.map((t) => `[NMT] ${t.replace(/(\d+)-foot/g, "$1 pieds")}`);
+};
+const OPTS = { nmt: fakeNmt };
 
 const SPELLS = [
   {
@@ -18,37 +29,45 @@ const SPELLS = [
       "<p><strong>Using a Higher-Level Spell Slot.</strong> The healing increases by 2d8 for each spell slot level above 1.</p>",
   },
   {
-    name: "Magic Missile",
-    html:
-      "<p>You create three glowing darts of magical force. Each dart strikes a creature of your choice that you can see within range. A dart deals 1d4 + 1 Force damage to its target.</p>" +
-      "<p><strong>Using a Higher-Level Spell Slot.</strong> The spell creates one more dart for each spell slot level above 1.</p>",
-  },
-  {
     name: "Hold Person",
     html:
       "<p>Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.</p>",
   },
+  {
+    name: "Eye Ray",
+    html: "<p><em>Ranged Attack Roll:</em> [[/attack extended]], range 150 ft. <em>Hit:</em> [[/damage 1d8+3 psychic]] Psychic damage.</p>",
+  },
 ];
 
 let total = 0;
-let covered = 0;
+let byRules = 0;
 
 for (const spell of SPELLS) {
-  const { html, report } = await translateHtml(spell.html);
-  console.log(`\n=== ${spell.name} → ${translateName(spell.name) ?? "(nom inconnu)"} ===`);
+  const { html, report } = await translateHtml(spell.html, OPTS);
+  console.log(`\n=== ${spell.name} → ${await translateName(spell.name, OPTS)} ===`);
   for (const r of report) {
     total++;
-    const ok = r.layer !== "non traduit";
-    if (ok) covered++;
-    console.log(`${ok ? "✔" : "·"} [${r.layer}]`);
-    console.log(`    ${ok ? r.text : r.masked}`);
+    if (r.layer.startsWith("gabarit")) byRules++;
+    console.log(`  [${r.layer}] ${r.text}`);
   }
-  console.log(`\n  HTML : ${html}`);
+  console.log(`  HTML : ${html}`);
 }
 
-console.log(`\nCouverture sans moteur neuronal : ${covered}/${total} phrases (${Math.round((covered / total) * 100)} %)`);
+console.log(`\nGabarits : ${byRules}/${total} phrases, le reste part au modèle.`);
 
-// Cas réel : bloc de stats importé (enrichers dnd5e).
-const eye = `<p><em>Ranged Attack Roll:</em> [[/attack extended]], range 150 ft. <em>Hit:</em> [[/damage 1d8+3 psychic]] Psychic damage.</p><p>Bonus equals your spell attack modifier, range 150 ft. Hit: 1d8 + 3 + the spell's level Psychic damage.</p>`;
-const r = await translateHtml(eye);
-console.log(`\n=== Eye Ray → ${translateName("Eye Ray")} | ${translateName("Aberrant Spirit (Beholderkin)")} ===\n${r.html}`);
+// Vérifications
+const assert = (cond, msg) => {
+  if (!cond) {
+    console.error(`ÉCHEC : ${msg}`);
+    process.exitCode = 1;
+  }
+};
+const before = calls;
+await translateHtml(SPELLS[0].html, OPTS);
+assert(calls === before, "une phrase déjà traduite doit venir du cache");
+const eye = await translateHtml(SPELLS[3].html, OPTS);
+assert(eye.html.includes("[[/attack extended]]") && eye.html.includes("[[/damage 1d8+3 psychic]]"), "les jets en ligne restent intacts");
+assert(eye.html.includes('150 pieds <span class="truchement-alt">'), "l'équivalent des distances est ajouté à la sortie du modèle");
+const none = await translateHtml("<p>Plain text.</p>");
+assert(none.report[0].layer === "non traduit", "sans modèle, le texte reste tel quel");
+console.log(`Cache : ${CACHE.size} entrées. ${process.exitCode ? "" : "Toutes les vérifications passent."}`);

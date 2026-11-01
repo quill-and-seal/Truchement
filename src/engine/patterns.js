@@ -2,7 +2,7 @@
 // Chaque gabarit renvoie la phrase traduite, ou null s'il ne sait pas faire
 // (terme absent du dictionnaire) : la phrase passe alors à la couche suivante.
 
-import { ABILITIES, DAMAGE_TYPES, CONDITIONS, lookupNoun, article } from "./glossary.js";
+import { ABILITIES, DAMAGE_TYPES, CONDITIONS, lookupNoun, article } from "./vocabulary.js";
 import { feetText, ordinal } from "./units.js";
 
 const DICE = String.raw`(\d+d\d+(?:\s*[+\-−]\s*\d+)?)`;

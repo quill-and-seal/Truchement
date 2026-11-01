@@ -1,93 +1,94 @@
-// Pipeline en couches : mémoire → gabarits → (glossaire + moteur neuronal).
-// Chaque phrase descend les couches jusqu'à ce que l'une d'elles la traite.
+// Pipeline : cache → gabarits de règles → modèle neuronal.
+//
+// - Cache : phrases déjà traduites (rempli au fil de l'eau, aucune entrée écrite à la main).
+// - Gabarits : phrases de règles formulaires, reconstruites par algorithme.
+// - Modèle neuronal : tout le reste (prose, noms, fragments).
+//
+// `nmt` est une fonction async (textes: string[]) => string[] fournie par
+// l'appelant : le worker transformers.js dans Foundry, un faux modèle en test.
 
-import { TERMS, NAMES } from "./glossary.js";
 import { matchPattern } from "./patterns.js";
-import { translateFragments } from "./fragments.js";
+import { feetText, metersText } from "./units.js";
 
-// Couche 1 : mémoire de traduction (phrases déjà connues, exactes).
-// En jeu, elle sera aussi alimentée par le cache des traductions passées.
-export const MEMORY = new Map([
-  ["Using a Higher-Level Spell Slot.", "Utilisation d'un emplacement de sort de niveau supérieur."],
-  [
-    "At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.",
-    "À la fin de chacun de ses tours, la cible refait le jet de sauvegarde et met fin au sort qui l'affecte en cas de réussite.",
-  ],
-]);
-
-const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const TERM_RES = TERMS.map(([en, fr]) => [new RegExp(`\\b${escapeRe(en)}\\b`, "gi"), fr]);
-
-// Couche 3 : remplace les termes de jeu par des marqueurs ⟦n⟧.
-export function protectTerms(text) {
-  const kept = [];
-  let out = text;
-  for (const [re, fr] of TERM_RES) {
-    out = out.replace(re, () => `⟦${kept.push(fr) - 1}⟧`);
-  }
-  return { text: out, kept };
-}
-
-export function restoreTerms(text, kept) {
-  return text.replace(/⟦(\d+)⟧/g, (_, i) => kept[Number(i)]);
-}
-
-function splitSentences(text) {
-  return text.split(/(?<=[.!?])\s+(?=[A-Z])/);
-}
-
-export async function translateSentence(sentence, { nmt } = {}) {
-  const trimmed = sentence.trim();
-  if (!trimmed) return { text: sentence, layer: "vide" };
-
-  if (MEMORY.has(trimmed)) return { text: MEMORY.get(trimmed), layer: "mémoire" };
-
-  const pat = matchPattern(trimmed);
-  if (pat) return { text: pat.text, layer: `gabarit:${pat.id}` };
-
-  // Couche 4 : moteur neuronal, avec termes protégés.
-  const { text: masked, kept } = protectTerms(trimmed);
-  if (nmt) {
-    const raw = await nmt(masked);
-    if (raw) return { text: restoreTerms(raw, kept), layer: "neuronal" };
-  }
-
-  // Couche 5 : fragments connus (termes de règles, blocs de stats).
-  const frag = translateFragments(trimmed);
-  if (frag) return { text: frag, layer: "fragments" };
-
-  return { text: trimmed, layer: "non traduit", masked };
-}
+export const CACHE = new Map();
 
 // Éléments à ne jamais traduire : balises HTML, liens @UUID[...]{...},
 // références &Reference[...]{...} et jets en ligne [[/attack]], [[/damage …]].
 const PROTECTED = /(<[^>]+>|[@&]\w+\[[^\]]*\](?:\{[^}]*\})?|\[\[[^\]]*\]\](?:\{[^}]*\})?)/;
 const isProtected = (s) => s.startsWith("<") || s.startsWith("@") || s.startsWith("&") || s.startsWith("[[");
 
+function splitSentences(text) {
+  return text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+}
+
+// Le modèle traduit "20-foot" en "20 pieds" : on ajoute l'équivalent en petit.
+// Ignore les distances déjà annotées (dans un span truchement-alt).
+export function annotateUnits(text) {
+  return text
+    // "ft." : le point n'est gardé que s'il termine la phrase.
+    .replace(/(\d+(?:[.,]\d+)?)\s*(?:pieds?|ft\b(\.?))(?!\s*<span class="truchement-alt">)/g, (m, n, dot, o, str) => {
+      const end = dot && /^\s*$|^\s+[A-ZÀ-Ý]/.test(str.slice(o + m.length)) ? "." : "";
+      return feetText(n.replace(",", ".")) + end;
+    })
+    .replace(/(\d+(?:[.,]\d+)?)\s*mètres?(?!\s*<span class="truchement-alt">)/g, (_, n) => metersText(n));
+}
+
+// Résout une phrase sans modèle (cache ou gabarit), ou renvoie null.
+function resolveLocally(sentence) {
+  if (CACHE.has(sentence)) return { text: CACHE.get(sentence), layer: "cache" };
+  const pat = matchPattern(sentence);
+  if (pat) return { text: pat.text, layer: `gabarit:${pat.id}` };
+  return null;
+}
+
+// Traduit une liste de segments : tout ce qui n'est pas résolu localement
+// part au modèle en un seul lot.
+export async function translateSegments(segments, { nmt, onError } = {}) {
+  const results = segments.map((s) => resolveLocally(s.trim()));
+  const pending = [];
+  segments.forEach((s, i) => {
+    if (!results[i]) pending.push(i);
+  });
+
+  if (pending.length && nmt) {
+    const unique = [...new Set(pending.map((i) => segments[i].trim()))];
+    try {
+      const out = await nmt(unique);
+      const byText = new Map(unique.map((src, k) => [src, annotateUnits(out[k] ?? src)]));
+      for (const [src, fr] of byText) CACHE.set(src, fr);
+      for (const i of pending) results[i] = { text: byText.get(segments[i].trim()), layer: "neuronal" };
+    } catch (err) {
+      // Modèle indisponible : les gabarits restent appliqués, le reste en anglais.
+      onError?.(err);
+    }
+  }
+
+  return segments.map((s, i) => results[i] ?? { text: s.trim(), layer: "non traduit" });
+}
+
 // Traduit un fragment HTML : seuls les nœuds texte sont traduits.
 export async function translateHtml(html, opts = {}) {
   const parts = html.split(PROTECTED);
-  const report = [];
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (!part || isProtected(part) || !part.trim()) continue;
-    const lead = part.match(/^\s*/)[0];
-    const trail = part.match(/\s*$/)[0];
-    const out = [];
-    for (const s of splitSentences(part.trim())) {
-      const r = await translateSentence(s, opts);
-      report.push({ source: s, ...r });
-      out.push(r.text);
-    }
-    parts[i] = lead + out.join(" ") + trail;
+  const slots = [];
+  const sentences = [];
+
+  parts.forEach((part, i) => {
+    if (!part || isProtected(part) || !part.trim()) return;
+    const list = splitSentences(part.trim());
+    slots.push({ i, lead: part.match(/^\s*/)[0], trail: part.match(/\s*$/)[0], from: sentences.length, n: list.length });
+    sentences.push(...list);
+  });
+
+  const results = await translateSegments(sentences, opts);
+  for (const { i, lead, trail, from, n } of slots) {
+    parts[i] = lead + results.slice(from, from + n).map((r) => r.text).join(" ") + trail;
   }
+
+  const report = sentences.map((source, k) => ({ source, ...results[k] }));
   return { html: parts.join(""), report };
 }
 
-// "Aberrant Spirit (Beholderkin)" : on essaie le nom entier, puis chaque partie.
-export function translateName(name) {
-  if (NAMES[name]) return NAMES[name];
-  const m = name.match(/^(.+?)\s*\((.+)\)$/);
-  if (m && NAMES[m[1]]) return `${NAMES[m[1]]} (${NAMES[m[2]] ?? m[2]})`;
-  return null;
+export async function translateName(name, opts = {}) {
+  const [r] = await translateSegments([name], opts);
+  return r.layer === "non traduit" ? null : r.text;
 }

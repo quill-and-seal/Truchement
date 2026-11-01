@@ -32,14 +32,15 @@ await api.revertDocument(item);     // revenir au texte d'origine
 
 ## Moteur de traduction
 
-Chaque phrase descend quatre couches jusqu'à ce que l'une d'elles la traite :
+Aucun dictionnaire : chaque phrase passe par trois couches.
 
-1. **Mémoire** — phrases déjà connues (`src/engine/pipeline.js`)
-2. **Gabarits** — phrases formulaires des règles, reconnues par regex (`src/engine/patterns.js`)
-3. **Dictionnaire** — termes de jeu, expressions figées, genre des noms (`src/engine/glossary.js`)
-4. **Moteur neuronal** — secours pour la prose libre, termes protégés par marqueurs (à brancher)
+1. **Cache** — phrases déjà traduites, rempli automatiquement et conservé dans le navigateur (`src/nmt/client.js`).
+2. **Gabarits de règles** — phrases formulaires (jets de sauvegarde, dégâts, soins, montée en niveau) reconnues par regex et reconstruites par algorithme, avec accords et genre (`src/engine/patterns.js`).
+3. **Modèle neuronal** — tout le reste : prose, noms, fragments. Modèle Marian `opus-mt-en-fr` exécuté localement avec transformers.js, dans un worker pour ne pas figer Foundry (`src/nmt/worker.js`).
 
-Les phrases qu'aucune couche ne sait traiter restent en anglais.
+Au premier usage, le modèle (~75 Mo) est téléchargé une fois puis mis en cache par le navigateur. Si le modèle est indisponible, seules les phrases de règles sont traduites.
+
+Les jets en ligne (`[[/attack]]`, `[[/damage …]]`), les liens `@UUID[…]` et les balises HTML ne sont jamais envoyés au modèle.
 
 Les distances restent dans l'unité du texte source, avec l'équivalent dans l'unité opposée affiché en petit (calcul exact, 1 pied = 0,3048 m).
 
@@ -48,6 +49,8 @@ Les distances restent dans l'unité du texte source, avec l'équivalent dans l'u
 ```sh
 node test/run.mjs
 ```
+
+Le banc d'essai utilise un faux modèle : il vérifie les gabarits, le cache, la protection des jets en ligne et l'annotation des distances.
 
 ## Publier une version
 

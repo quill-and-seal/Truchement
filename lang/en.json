@@ -17,7 +17,10 @@
     "Notify": {
       "Failed": "Truchement could not translate",
       "Done": "Translation done",
-      "Nothing": "Nothing recognized to translate"
+      "Nothing": "Nothing recognized to translate",
+      "Downloading": "Truchement: downloading the translation model (~75 MB, once)…",
+      "Ready": "Truchement: translation model ready",
+      "ModelError": "Truchement: translation model unavailable, only rule sentences are translated (see console)."
     },
     "Controls": {
       "Translate": "Translate (Truchement)"

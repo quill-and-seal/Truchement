@@ -2,11 +2,22 @@
 // Les hooks preCreate* sont synchrones, on traduit donc dans create* puis on
 // met à jour le document (l'original est conservé dans les flags).
 
-import { translateHtml, translateName } from "./engine/pipeline.js";
+import { translateHtml, translateName, CACHE } from "./engine/pipeline.js";
+import { nmt, setCallbacks, loadCache, saveCache } from "./nmt/client.js";
 
 const ID = "truchement";
 const t = (key) => game.i18n.localize(`TRUCHEMENT.${key}`);
 const setting = (key) => game.settings.get(ID, key);
+let nmtWarned = false;
+const OPTS = {
+  nmt,
+  onError: (err) => {
+    console.error(`${ID} | modèle de traduction indisponible`, err);
+    if (nmtWarned) return;
+    nmtWarned = true;
+    ui.notifications.warn(t("Notify.ModelError"));
+  },
+};
 
 // --- Réglages -------------------------------------------------------------
 
@@ -42,6 +53,21 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", () => {
   applyAltUnitsClass(setting("showAltUnits"));
+  loadCache(CACHE);
+
+  // Premier usage : le modèle (~75 Mo) se télécharge, on prévient une fois.
+  let warned = false;
+  setCallbacks({
+    progress: () => {
+      if (warned) return;
+      warned = true;
+      ui.notifications.info(t("Notify.Downloading"));
+    },
+    ready: () => {
+      if (warned) ui.notifications.info(t("Notify.Ready"));
+    },
+  });
+
   game.modules.get(ID).api = { translateDocument, revertDocument, translateHtml };
 });
 
@@ -72,8 +98,8 @@ async function translateFields(doc, fields) {
   const update = {};
   const original = {};
 
-  const frName = translateName(doc.name);
-  if (frName) {
+  const frName = await translateName(doc.name, OPTS);
+  if (frName && frName !== doc.name) {
     update.name = frName;
     original.name = doc.name;
   }
@@ -81,7 +107,7 @@ async function translateFields(doc, fields) {
   for (const path of fields) {
     const html = foundry.utils.getProperty(doc, path);
     if (!html) continue;
-    const { html: fr } = await translateHtml(html);
+    const { html: fr } = await translateHtml(html, OPTS);
     if (fr !== html) {
       update[path] = fr;
       original[path] = html;
@@ -95,6 +121,14 @@ async function translateFields(doc, fields) {
 
 // Renvoie le nombre de documents modifiés.
 export async function translateDocument(doc) {
+  try {
+    return await translateDocumentInner(doc);
+  } finally {
+    saveCache(CACHE);
+  }
+}
+
+async function translateDocumentInner(doc) {
   if (doc.documentName === "Actor") return translateActor(doc);
   if (doc.documentName === "JournalEntry") return translateJournal(doc);
   const update = await translateFields(doc, HTML_FIELDS[doc.documentName] ?? []);
