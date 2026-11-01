@@ -372,7 +372,7 @@ Hooks.on("renderApplicationV2", (app, element) => {
   if (state === "fr" && setting("translateInterface")) {
     watchInterface(app, element, OPTS, () => saveCache(CACHE));
   } else {
-    unwatchInterface(app);
+    unwatchInterface(app, element);
   }
 });
 

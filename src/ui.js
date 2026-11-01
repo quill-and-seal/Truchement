@@ -90,14 +90,44 @@ const I18N_KEY = /^[A-Z][A-Z0-9_-]*(\.[\w-]+)+$/;
 const FRENCH_HINT = /[àâçéèêëîïôûùœ]/i;
 
 // Faut-il traduire ce texte ? (doit contenir des lettres, ne pas être déjà français)
+// Abréviations des caractéristiques (STR, DEX…) : jamais traduites.
+// Lues dans la configuration du système, plus les six classiques.
+let ABBR = null;
+function abbreviations() {
+  if (ABBR) return ABBR;
+  ABBR = new Set(["str", "dex", "con", "int", "wis", "cha"]);
+  for (const [key, a] of Object.entries(globalThis.CONFIG?.DND5E?.abilities ?? {})) {
+    ABBR.add(key.toLowerCase());
+    if (a?.abbreviation) ABBR.add(game.i18n.localize(a.abbreviation).toLowerCase());
+  }
+  return ABBR;
+}
+
 function candidate(text) {
   const t = text.trim();
   if (t.length < 2 || !/[A-Za-z]{2,}/.test(t)) return false;
   if (PRODUCED.has(t) || FRENCH_HINT.test(t)) return false;
+  if (abbreviations().has(t.toLowerCase())) return false;
   return true;
 }
 
+// Journal des remplacements par fenêtre, pour tout remettre en anglais.
+const JOURNAL = new WeakMap();
+
+function logChange(root, restore) {
+  let list = JOURNAL.get(root);
+  if (!list) JOURNAL.set(root, (list = []));
+  list.push(restore);
+}
+
+// Remet le texte d'origine, sauf si la fiche l'a déjà redessiné entre-temps.
+export function restoreInterface(root) {
+  for (const restore of JOURNAL.get(root) ?? []) restore();
+  JOURNAL.delete(root);
+}
+
 function collect(root) {
+  // Chaque cible enregistre de quoi revenir en arrière au moment où elle est modifiée.
   const targets = []; // { text, apply(fr) }
 
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -107,18 +137,38 @@ function collect(root) {
     if (!candidate(raw)) continue;
     const lead = raw.match(/^\s*/)[0];
     const trail = raw.match(/\s*$/)[0];
-    targets.push({ text: raw.trim(), apply: (fr) => (node.nodeValue = lead + fr + trail), isConnected: () => node.isConnected });
+    targets.push({
+      text: raw.trim(),
+      apply: (fr) => {
+        const written = lead + fr + trail;
+        node.nodeValue = written;
+        logChange(root, () => {
+          if (node.isConnected && node.nodeValue === written) node.nodeValue = raw;
+        });
+      },
+      isConnected: () => node.isConnected,
+    });
   }
 
   for (const el of root.querySelectorAll(ATTRS.map((a) => `[${a}]`).join(","))) {
     if (el.closest(".truchement-badge")) continue;
     for (const attr of ATTRS) {
-      let value = el.getAttribute(attr);
+      const rawValue = el.getAttribute(attr);
+      let value = rawValue;
       if (!value) continue;
       // Infobulle donnée par clé de traduction : Foundry la traduirait à l'affichage.
       if (I18N_KEY.test(value) && game.i18n.has(value)) value = game.i18n.localize(value);
       if (/<[^>]+>/.test(value) || !candidate(value)) continue;
-      targets.push({ text: value.trim(), apply: (fr) => el.setAttribute(attr, fr), isConnected: () => el.isConnected });
+      targets.push({
+        text: value.trim(),
+        apply: (fr) => {
+          el.setAttribute(attr, fr);
+          logChange(root, () => {
+            if (el.isConnected && el.getAttribute(attr) === fr) el.setAttribute(attr, rawValue);
+          });
+        },
+        isConnected: () => el.isConnected,
+      });
     }
   }
   return targets;
@@ -233,7 +283,11 @@ export function watchInterface(app, element, opts, onPass) {
   schedule();
 }
 
-export function unwatchInterface(app) {
-  WATCHERS.get(app)?.observer.disconnect();
+export function unwatchInterface(app, element) {
+  const w = WATCHERS.get(app);
+  w?.observer.disconnect();
   WATCHERS.delete(app);
+  // Retour en anglais : on défait ce que Truchement a changé dans la fenêtre.
+  const root = w?.element ?? element;
+  if (root) restoreInterface(root);
 }
