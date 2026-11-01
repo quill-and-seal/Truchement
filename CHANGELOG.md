@@ -6,6 +6,12 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.13
+
+### Nouveautés
+- Section `expressions` du glossaire (52 expressions) : termes protégés à l'intérieur des phrases envoyées au modèle, puis remis en français (« Dexterity saving throw » → « jet de sauvegarde de Dextérité »). Le modèle ne peut plus retraduire un terme du glossaire au milieu d'une phrase.
+- Repli automatique si le modèle perd un marqueur : la phrase est renvoyée avec le terme français écrit dedans.
+
 ## 0.2.12
 
 ### Nouveautés

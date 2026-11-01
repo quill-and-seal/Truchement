@@ -69,6 +69,7 @@ Les distances restent dans l'unité du texte source, avec l'équivalent dans l'u
 
 - **`termes`** — correspondance exacte d'un texte entier (`"Roll": "Jet"`), majuscules comprises, puis sans tenir compte de la casse ;
 - **`formules`** — libellés à variables (`"Roll {ability} Saving Throw": "Jet de sauvegarde de {ability}"`) ; les variables sont elles-mêmes traduites par le glossaire.
+- **`expressions`** — termes protégés **à l'intérieur des phrases** envoyées au modèle (`"saving throw": "jet de sauvegarde"`) : remplacés par des marqueurs avant le modèle, puis par leur traduction après (majuscule seulement en début de phrase). Si le modèle perd un marqueur, la phrase est renvoyée avec le français écrit directement dedans.
 
 Il s'applique au contenu (noms, libellés des jets en ligne, noms composés « X (Y) » partie par partie) comme à l'interface. Les corrections faites par **Alt+clic** dans Foundry passent avant le fichier ; pour qu'une correction profite à tous, ajoute-la au fichier dans le dépôt.
 

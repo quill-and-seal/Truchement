@@ -104,3 +104,18 @@ setCorrectionsProvider(() => ({ Darkvision: "Vision nocturne" }));
 assert((await translateSegments(["Darkvision"], {}))[0].text === "Vision nocturne", "la correction du MJ passe avant le fichier");
 setCorrectionsProvider(() => ({}));
 console.log(process.exitCode ? "ÉCHEC" : "Glossaire : toutes les vérifications passent.");
+
+// Expressions protégées dans les phrases
+const phrase = "Each creature makes a Dexterity saving throw and has disadvantage on attack rolls until it regains Hit Points.";
+const sentToModel = [];
+const keeps = async (t) => (sentToModel.push(...t), t.map((x) => `[NMT] ${x}`));
+const p1 = (await translateSegments([phrase], { nmt: keeps }))[0].text;
+console.log(`\n=== Expressions ===\nenvoyé : ${sentToModel[0]}\nrendu  : ${p1}`);
+assert(!/saving throw|disadvantage|Hit Points/.test(sentToModel[0]), "les expressions ne sont pas envoyées au modèle");
+assert(p1.includes("jet de sauvegarde de Dextérité") && p1.includes("désavantage") && p1.includes("jets d'attaque") && p1.includes("points de vie"), "les expressions sont remises en français, en minuscules dans la phrase");
+const sent2 = [];
+const drops = async (t) => (sent2.push(...t), t.map((x) => x.replace(/\[T\d+\]/g, "XX")));
+const p2 = (await translateSegments(["You have advantage on the next attack roll you make."], { nmt: drops }))[0].text;
+console.log(`marqueurs perdus → 2e envoi : ${sent2[1]}`);
+assert(sent2.length === 2 && sent2[1].includes("avantage") && sent2[1].includes("jet d'attaque"), "marqueur perdu : renvoi avec le français écrit dans la phrase");
+console.log(process.exitCode ? "ÉCHEC" : "Expressions : toutes les vérifications passent.");

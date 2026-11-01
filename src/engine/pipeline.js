@@ -8,7 +8,7 @@
 // l'appelant : le worker transformers.js dans Foundry, un faux modèle en test.
 
 import { matchPattern, splitSuffix } from "./patterns.js";
-import { lookupGlossary } from "./glossary.js";
+import { lookupGlossary, maskExpressions, unmaskExpressions, inlineExpressions } from "./glossary.js";
 import { feetText, metersText } from "./units.js";
 
 export const CACHE = new Map();
@@ -46,6 +46,27 @@ function resolveLocally(sentence) {
   return null;
 }
 
+// Envoie des phrases au modèle en protégeant les expressions du glossaire :
+// remplacées par des marqueurs [T0]… avant, par leur traduction après.
+// Si le modèle perd ou duplique un marqueur, la phrase est renvoyée avec le
+// français écrit directement dedans (le modèle recopie les mots étrangers).
+async function translateProtected(bodies, nmt) {
+  const masks = bodies.map(maskExpressions);
+  const out = await nmt(masks.map((m) => m.masked));
+  const retry = [];
+  const result = out.map((fr, k) => {
+    if (!masks[k].kept.length) return fr;
+    const restored = fr == null ? null : unmaskExpressions(fr, masks[k].kept);
+    if (restored == null) retry.push(k);
+    return restored;
+  });
+  if (retry.length) {
+    const second = await nmt(retry.map((k) => inlineExpressions(bodies[k])));
+    retry.forEach((k, j) => (result[k] = second[j]));
+  }
+  return result;
+}
+
 // Traduit une liste de segments : tout ce qui n'est pas résolu localement
 // part au modèle en un seul lot.
 export async function translateSegments(segments, { nmt, onError } = {}) {
@@ -59,7 +80,7 @@ export async function translateSegments(segments, { nmt, onError } = {}) {
     const unique = [...new Set(pending.map((i) => segments[i].trim()))];
     const split = unique.map(splitSuffix);
     try {
-      const out = await nmt(split.map((x) => x.body));
+      const out = await translateProtected(split.map((x) => x.body), nmt);
       const byText = new Map(
         unique.map((src, k) => {
           // Le modèle remet parfois un point final : on l'enlève avant de recoller la formule.

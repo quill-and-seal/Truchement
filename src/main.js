@@ -165,8 +165,8 @@ async function loadGlossary() {
   try {
     const res = await fetch(foundry.utils.getRoute(`modules/${ID}/data/glossaire.json`));
     if (res.ok) setGlossary(await res.json());
-    const { termes, formules } = glossarySize();
-    console.log(`${ID} | glossaire : ${termes} termes, ${formules} formules`);
+    const { termes, formules, expressions } = glossarySize();
+    console.log(`${ID} | glossaire : ${termes} termes, ${formules} formules, ${expressions} expressions`);
   } catch (err) {
     console.warn(`${ID} | glossaire illisible`, err);
   }

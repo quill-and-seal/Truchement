@@ -8,6 +8,7 @@
 const TERMS = new Map();
 const TERMS_CI = new Map();
 const FORMULAS = []; // { re, fr, names }
+const EXPRESSIONS = []; // { re, fr } — triées de la plus longue à la plus courte
 
 let corrections = () => ({});
 export function setCorrectionsProvider(fn) {
@@ -20,6 +21,7 @@ export function setGlossary(data = {}) {
   TERMS.clear();
   TERMS_CI.clear();
   FORMULAS.length = 0;
+  EXPRESSIONS.length = 0;
   for (const [en, fr] of Object.entries(data.termes ?? {})) {
     if (typeof fr !== "string" || !fr) continue;
     TERMS.set(en, fr);
@@ -30,10 +32,47 @@ export function setGlossary(data = {}) {
     const src = escapeRe(en).replace(/\\\{(\w+)\\\}/g, (_, n) => (names.push(n), "(.+?)"));
     if (names.length) FORMULAS.push({ re: new RegExp(`^${src}$`, "i"), fr, names });
   }
+  const expr = Object.entries(data.expressions ?? {}).filter(([, fr]) => typeof fr === "string" && fr);
+  expr.sort((a, b) => b[0].length - a[0].length);
+  for (const [en, fr] of expr) EXPRESSIONS.push({ re: new RegExp(`\\b${escapeRe(en)}\\b`, "gi"), fr });
 }
 
 export function glossarySize() {
-  return { termes: TERMS.size, formules: FORMULAS.length };
+  return { termes: TERMS.size, formules: FORMULAS.length, expressions: EXPRESSIONS.length };
+}
+
+// Dans une phrase, le français ne met la majuscule qu'en début de phrase
+// (l'anglais 2024 en met aux termes de jeu : « regains Hit Points »).
+function matchCase(offset, text, fr) {
+  const start = /^\s*$/.test(text.slice(0, offset)) || /[.!?:]\s*$/.test(text.slice(0, offset));
+  return (start ? fr[0].toUpperCase() : fr[0].toLowerCase()) + fr.slice(1);
+}
+
+// Remplace les expressions du glossaire par des marqueurs [T0], [T1]…
+// Renvoie { masked, kept } ; kept[i] est la traduction à remettre.
+export function maskExpressions(text) {
+  const kept = [];
+  let masked = text;
+  for (const { re, fr } of EXPRESSIONS) {
+    masked = masked.replace(re, (m, offset, str) => `[T${kept.push(matchCase(offset, str, fr)) - 1}]`);
+  }
+  return { masked, kept };
+}
+
+// Remet les traductions ; null si un marqueur a été perdu ou dupliqué par le modèle.
+export function unmaskExpressions(text, kept) {
+  for (let i = 0; i < kept.length; i++) {
+    const n = text.split(`[T${i}]`).length - 1;
+    if (n !== 1) return null;
+  }
+  return text.replace(/\[T(\d+)\]/g, (_, i) => kept[Number(i)]);
+}
+
+// Variante sans marqueur : le français est écrit directement dans la phrase anglaise.
+export function inlineExpressions(text) {
+  let out = text;
+  for (const { re, fr } of EXPRESSIONS) out = out.replace(re, (m, offset, str) => matchCase(offset, str, fr));
+  return out;
 }
 
 function lookupTerm(t) {
