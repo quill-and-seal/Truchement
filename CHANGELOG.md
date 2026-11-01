@@ -6,6 +6,13 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.15
+
+### Nouveautés
+- **Bouton drapeau** (MJ) dans l'en-tête des fiches : signaler un problème de traduction. Capture de la fiche en FR et en EN, envoi avec les textes, les versions et une remarque.
+- **Relais de signalement** (`relay/`, Docker) : dépose les captures dans le dépôt privé `truchement-reports` et crée l'issue `[Traduction] Nom — Type`, ou ajoute un commentaire si elle existe déjà. Le jeton GitHub reste sur le serveur ; limite d'envois par adresse IP.
+- Réglage « Adresse du relais de signalement ».
+
 ## 0.2.14
 
 ### Corrections

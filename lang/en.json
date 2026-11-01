@@ -16,6 +16,10 @@
       "TranslateInterface": {
         "Name": "Translate sheet interface",
         "Hint": "When the badge is on FR, also translates the sheet's labels, tabs and tooltips (from installed French language files, otherwise with the model)."
+      },
+      "ReportUrl": {
+        "Name": "Report relay address",
+        "Hint": "Address of the server receiving translation reports (flag button on sheets). Keep the default unless told otherwise."
       }
     },
     "Notify": {
@@ -38,6 +42,18 @@
       "Title": "Truchement: correct the translation",
       "Original": "Original text",
       "Save": "Save"
+    },
+    "Report": {
+      "Button": "Truchement: report a translation problem",
+      "Title": "Report a translation problem",
+      "Intro": "A screenshot of the sheet in French and English will be sent with your note.",
+      "Placeholder": "What is wrong? (optional)",
+      "Send": "Send",
+      "NoUrl": "Truchement: no report relay address is configured.",
+      "Capturing": "Truchement: capturing the sheet…",
+      "Created": "Truchement: report sent, issue",
+      "Added": "Truchement: report added to issue",
+      "Failed": "Truchement: report failed"
     }
   }
 }

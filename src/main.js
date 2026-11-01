@@ -4,6 +4,7 @@
 
 import { translateHtml, translateName, CACHE } from "./engine/pipeline.js";
 import { setGlossary, setCorrectionsProvider, glossarySize } from "./engine/glossary.js";
+import { reportDocument, REPORT_URL } from "./report.js";
 import { nmt, setCallbacks, loadCache, saveCache } from "./nmt/client.js";
 import {
   watchInterface,
@@ -64,6 +65,15 @@ Hooks.once("init", () => {
     config: false,
     type: Object,
     default: {},
+  });
+
+  game.settings.register(ID, "reportUrl", {
+    name: "TRUCHEMENT.Settings.ReportUrl.Name",
+    hint: "TRUCHEMENT.Settings.ReportUrl.Hint",
+    scope: "world",
+    config: true,
+    type: String,
+    default: REPORT_URL,
   });
 
   game.settings.register(ID, "showAltUnits", {
@@ -450,6 +460,29 @@ Hooks.on("renderApplicationV2", (app, element) => {
   const anchor = header.querySelector('[data-action="toggleControls"]') ?? header.querySelector('[data-action="close"]');
   if (anchor) anchor.before(btn);
   else header.append(btn);
+
+  // Bouton « Signaler un problème de traduction » (MJ).
+  header.querySelector(".truchement-report")?.remove();
+  if (game.user.isGM && state !== "none") {
+    const flag = document.createElement("button");
+    flag.type = "button";
+    flag.className = "truchement-report header-control";
+    flag.dataset.tooltip = t("Report.Button");
+    flag.setAttribute("aria-label", t("Report.Button"));
+    flag.innerHTML = '<i class="fa-solid fa-flag"></i>';
+    flag.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+    flag.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      flag.disabled = true;
+      try {
+        await reportDocument(app, doc, setting("reportUrl"), { stateOf, toggleDocument });
+      } finally {
+        flag.disabled = false;
+      }
+    });
+    btn.after(flag);
+  }
 
   // Badge sur FR : toute la fiche passe en français, interface comprise.
   if (state === "fr" && setting("translateInterface")) {

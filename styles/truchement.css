@@ -32,3 +32,12 @@ body.truchement-hide-alt .truchement-alt {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Bouton de signalement, à côté du badge */
+.truchement-report {
+  width: auto;
+  padding: 0 0.35em;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+.truchement-report:hover { opacity: 1; color: #e6b45c; }

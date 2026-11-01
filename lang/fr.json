@@ -16,6 +16,10 @@
       "TranslateInterface": {
         "Name": "Traduire l'interface des fiches",
         "Hint": "Quand le badge est sur FR, traduit aussi les libellés, onglets et infobulles de la fiche (d'après les fichiers de langue français installés, sinon par le modèle)."
+      },
+      "ReportUrl": {
+        "Name": "Adresse du relais de signalement",
+        "Hint": "Adresse du serveur qui reçoit les signalements de traduction (bouton drapeau des fiches). Laisser la valeur par défaut sauf instruction contraire."
       }
     },
     "Notify": {
@@ -38,6 +42,18 @@
       "Title": "Truchement : corriger la traduction",
       "Original": "Texte d'origine",
       "Save": "Enregistrer"
+    },
+    "Report": {
+      "Button": "Truchement : signaler un problème de traduction",
+      "Title": "Signaler un problème de traduction",
+      "Intro": "Une capture de la fiche en français et en anglais sera envoyée avec ta remarque.",
+      "Placeholder": "Qu'est-ce qui ne va pas ? (facultatif)",
+      "Send": "Envoyer",
+      "NoUrl": "Truchement : aucune adresse de relais de signalement n'est configurée.",
+      "Capturing": "Truchement : capture de la fiche en cours…",
+      "Created": "Truchement : signalement envoyé, issue",
+      "Added": "Truchement : signalement ajouté à l'issue",
+      "Failed": "Truchement : échec du signalement"
     }
   }
 }
