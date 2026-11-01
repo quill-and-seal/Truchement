@@ -68,7 +68,7 @@ Hooks.once("ready", () => {
     },
   });
 
-  game.modules.get(ID).api = { translateDocument, revertDocument, translateHtml };
+  game.modules.get(ID).api = { translateDocument, toggleDocument, revertDocument, stateOf, translateHtml };
 });
 
 function applyAltUnitsClass(show) {
@@ -115,7 +115,9 @@ async function translateFields(doc, fields) {
   }
 
   if (!Object.keys(update).length) return null;
-  update[`flags.${ID}`] = { translated: true, original };
+  // Les deux versions sont conservées pour pouvoir basculer de l'une à l'autre.
+  const translation = { ...update };
+  update[`flags.${ID}`] = { translated: true, showing: "fr", original, translation };
   return update;
 }
 
@@ -151,6 +153,7 @@ async function translateActor(actor) {
     if (u) items.push({ _id: item.id, ...u });
   }
   if (items.length) await actor.updateEmbeddedDocuments("Item", items);
+  if (!update && items.length) await actor.setFlag(ID, "showing", "fr");
   console.log(`${ID} | acteur « ${actor.name} » : ${items.length}/${actor.items.size} objets traduits`);
   return n + items.length;
 }
@@ -162,17 +165,71 @@ async function translateJournal(entry) {
     const u = await translateFields(page, ["text.content"]);
     if (u) pages.push({ _id: page.id, ...u });
   }
-  if (pages.length) await entry.updateEmbeddedDocuments("JournalEntryPage", pages);
+  if (pages.length) {
+    await entry.updateEmbeddedDocuments("JournalEntryPage", pages);
+    await entry.setFlag(ID, "showing", "fr");
+  }
   return pages.length;
 }
 
-// Restaure le texte d'origine (anglais) conservé dans les flags.
+// --- Bascule traduction / version d'origine -------------------------------
+
+const TYPES = ["Actor", "Item", "JournalEntry"];
+
+function childrenOf(doc) {
+  if (doc.documentName === "Actor") return { name: "Item", docs: [...doc.items] };
+  if (doc.documentName === "JournalEntry") return { name: "JournalEntryPage", docs: [...doc.pages] };
+  return { name: null, docs: [] };
+}
+
+// "none" (jamais traduit), "fr" (traduction affichée) ou "en" (original affiché).
+export function stateOf(doc) {
+  const f = doc.flags?.[ID];
+  const translated = f?.translated || childrenOf(doc).docs.some((c) => c.flags?.[ID]?.translated);
+  if (!translated) return "none";
+  return f?.showing ?? "fr";
+}
+
+// Valeurs actuelles des champs listés dans `original` (pour les documents
+// traduits par une ancienne version, qui n'avaient pas gardé la traduction).
+function capture(doc, original) {
+  const out = {};
+  for (const key of Object.keys(foundry.utils.flattenObject(original))) {
+    foundry.utils.setProperty(out, key, foundry.utils.getProperty(doc, key));
+  }
+  return out;
+}
+
+function swapData(doc, target) {
+  const f = doc.flags?.[ID];
+  if (!f?.translated || !f.original) return null;
+  if (target === "en") {
+    const translation = f.translation ?? capture(doc, f.original);
+    return { ...f.original, [`flags.${ID}.translation`]: translation, [`flags.${ID}.showing`]: "en" };
+  }
+  if (!f.translation) return null;
+  return { ...f.translation, [`flags.${ID}.showing`]: "fr" };
+}
+
+// Bascule entre la traduction et la version d'origine (document + enfants).
+export async function toggleDocument(doc) {
+  const state = stateOf(doc);
+  if (state === "none") return onTranslateClick(doc);
+  const target = state === "fr" ? "en" : "fr";
+
+  const children = childrenOf(doc);
+  const updates = [];
+  for (const child of children.docs) {
+    const data = swapData(child, target);
+    if (data) updates.push({ _id: child.id, ...data });
+  }
+  if (updates.length) await doc.updateEmbeddedDocuments(children.name, updates);
+  await doc.update(swapData(doc, target) ?? { [`flags.${ID}.showing`]: target });
+}
+
+// Compatibilité : revenir à l'original.
 export async function revertDocument(doc) {
-  const original = doc.getFlag(ID, "original");
-  if (!original) return;
-  await doc.update(original);
-  await doc.unsetFlag(ID, "translated");
-  await doc.unsetFlag(ID, "original");
+  if (stateOf(doc) === "fr") await toggleDocument(doc);
 }
 
 // --- Hooks de création ----------------------------------------------------
@@ -223,4 +280,56 @@ Hooks.on("getHeaderControlsApplicationV2", (app, controls) => {
     action: "truchementTranslate",
     onClick: handler,
   });
+});
+
+// --- Badge d'état dans l'en-tête des fiches -------------------------------
+// Affiche l'état de Truchement ; un clic (MJ) bascule entre la traduction
+// et la version d'origine, ou lance la traduction si rien n'est traduit.
+
+const BADGE = {
+  none: { icon: "fa-solid fa-language", label: "", tip: "Badge.None" },
+  fr: { icon: "fa-solid fa-language", label: "FR", tip: "Badge.Fr" },
+  en: { icon: "fa-solid fa-language", label: "EN", tip: "Badge.En" },
+};
+
+Hooks.on("renderApplicationV2", (app, element) => {
+  const doc = app.document;
+  if (!doc || !TYPES.includes(doc.documentName)) return;
+  const header = element?.querySelector?.(".window-header");
+  if (!header) return;
+  header.querySelector(".truchement-badge")?.remove();
+
+  const state = stateOf(doc);
+  if (state === "none" && !game.user.isGM) return;
+  const b = BADGE[state];
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `truchement-badge header-control state-${state}`;
+  btn.dataset.tooltip = t(b.tip);
+  btn.setAttribute("aria-label", t(b.tip));
+  btn.innerHTML = `<i class="${b.icon}"></i>${b.label ? `<span>${b.label}</span>` : ""}`;
+  btn.disabled = !game.user.isGM;
+
+  // Empêche le déplacement de la fenêtre quand on clique sur le badge.
+  btn.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+  btn.addEventListener("click", async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    btn.disabled = true;
+    btn.classList.add("busy");
+    try {
+      await toggleDocument(doc);
+    } catch (err) {
+      console.error(`${ID} | échec de la bascule pour « ${doc.name} »`, err);
+      ui.notifications.error(`${t("Notify.Failed")} : ${doc.name}`);
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove("busy");
+    }
+  });
+
+  const anchor = header.querySelector('[data-action="toggleControls"]') ?? header.querySelector('[data-action="close"]');
+  if (anchor) anchor.before(btn);
+  else header.append(btn);
 });

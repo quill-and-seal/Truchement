@@ -16,6 +16,14 @@ https://github.com/quill-and-seal/Truchement/releases/latest/download/module.jso
 
 À la création d'un objet, d'un acteur (avec ses objets embarqués) ou d'un journal, Truchement traduit le nom et la description, puis met à jour le document. Le texte anglais d'origine est conservé dans `flags.truchement.original`.
 
+**Badge d'état** dans l'en-tête de chaque fiche (acteur, objet, journal) :
+
+- grisé : non traduit — un clic lance la traduction ;
+- **FR** (vert) : traduction affichée — un clic affiche la version d'origine ;
+- **EN** (orange) : version d'origine affichée — un clic revient à la traduction.
+
+La bascule s'applique aussi aux objets d'un acteur et aux pages d'un journal, sans relancer le modèle. Seul le MJ peut cliquer.
+
 Réglages :
 
 - **Traduction automatique** — active ou coupe la traduction à l'import.
@@ -27,7 +35,8 @@ API, depuis une macro :
 ```js
 const api = game.modules.get("truchement").api;
 await api.translateDocument(item);  // traduire un document existant
-await api.revertDocument(item);     // revenir au texte d'origine
+await api.toggleDocument(item);     // basculer traduction ↔ version d'origine
+api.stateOf(item);                  // "none", "fr" ou "en"
 ```
 
 ## Moteur de traduction

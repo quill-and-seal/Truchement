@@ -24,6 +24,11 @@
     },
     "Controls": {
       "Translate": "Traduire (Truchement)"
+    },
+    "Badge": {
+      "None": "Truchement : non traduit — cliquer pour traduire",
+      "Fr": "Truchement : traduction affichée — cliquer pour voir l'original",
+      "En": "Truchement : version d'origine affichée — cliquer pour revenir à la traduction"
     }
   }
 }

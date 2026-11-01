@@ -7,3 +7,21 @@
 body.truchement-hide-alt .truchement-alt {
   display: none;
 }
+
+/* Badge d'état dans l'en-tête des fiches */
+.truchement-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  width: auto;
+  padding: 0 0.4em;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.truchement-badge.state-none { opacity: 0.45; }
+.truchement-badge.state-fr { color: #8fd18f; }
+.truchement-badge.state-en { color: #e6b45c; }
+.truchement-badge.busy i { animation: fa-spin 1s linear infinite; }
+.truchement-badge:disabled:not(.busy) { cursor: default; }
