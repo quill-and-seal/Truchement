@@ -12,8 +12,8 @@ const setting = (key) => game.settings.get(ID, key);
 
 Hooks.once("init", () => {
   game.settings.register(ID, "enabled", {
-    name: t("Settings.Enabled.Name"),
-    hint: t("Settings.Enabled.Hint"),
+    name: "TRUCHEMENT.Settings.Enabled.Name",
+    hint: "TRUCHEMENT.Settings.Enabled.Hint",
     scope: "world",
     config: true,
     type: Boolean,
@@ -21,8 +21,8 @@ Hooks.once("init", () => {
   });
 
   game.settings.register(ID, "onlyPlutonium", {
-    name: t("Settings.OnlyPlutonium.Name"),
-    hint: t("Settings.OnlyPlutonium.Hint"),
+    name: "TRUCHEMENT.Settings.OnlyPlutonium.Name",
+    hint: "TRUCHEMENT.Settings.OnlyPlutonium.Hint",
     scope: "world",
     config: true,
     type: Boolean,
@@ -30,8 +30,8 @@ Hooks.once("init", () => {
   });
 
   game.settings.register(ID, "showAltUnits", {
-    name: t("Settings.ShowAltUnits.Name"),
-    hint: t("Settings.ShowAltUnits.Hint"),
+    name: "TRUCHEMENT.Settings.ShowAltUnits.Name",
+    hint: "TRUCHEMENT.Settings.ShowAltUnits.Hint",
     scope: "client",
     config: true,
     type: Boolean,
@@ -53,9 +53,10 @@ function applyAltUnitsClass(show) {
 
 function shouldTranslate(doc, userId) {
   if (userId !== game.user.id) return false; // un seul client traduit
-  if (!setting("enabled")) return false;
-  if (doc.getFlag(ID, "translated")) return false;
-  if (setting("onlyPlutonium") && !doc.flags?.plutonium) return false;
+  const skip = (why) => (console.log(`${ID} | « ${doc.name} » ignoré : ${why}`, doc.flags), false);
+  if (!setting("enabled")) return skip("traduction désactivée");
+  if (doc.getFlag(ID, "translated")) return skip("déjà traduit");
+  if (setting("onlyPlutonium") && !doc.flags?.plutonium) return skip("pas de flags Plutonium");
   return true;
 }
 
@@ -97,6 +98,7 @@ export async function translateDocument(doc) {
   if (doc.documentName === "JournalEntry") return translateJournal(doc);
   const update = await translateFields(doc, HTML_FIELDS[doc.documentName] ?? []);
   if (update) await doc.update(update);
+  console.log(`${ID} | « ${doc.name} » : ${update ? "traduit" : "rien à traduire"}`);
 }
 
 async function translateActor(actor) {
@@ -112,6 +114,7 @@ async function translateActor(actor) {
     if (u) items.push({ _id: item.id, ...u });
   }
   if (items.length) await actor.updateEmbeddedDocuments("Item", items);
+  console.log(`${ID} | acteur « ${actor.name} » : ${items.length}/${actor.items.size} objets traduits`);
 }
 
 async function translateJournal(entry) {
@@ -150,3 +153,20 @@ Hooks.on("createItem", (item, options, userId) => {
 });
 Hooks.on("createActor", onCreate);
 Hooks.on("createJournalEntry", onCreate);
+
+// --- Bouton « Traduire » sur les fiches -----------------------------------
+// Pour les documents déjà présents avant l'installation du module.
+
+Hooks.on("getHeaderControlsApplicationV2", (app, controls) => {
+  const doc = app.document;
+  if (!game.user.isGM || !doc || !["Actor", "Item", "JournalEntry"].includes(doc.documentName)) return;
+  controls.push({
+    icon: "fa-solid fa-language",
+    label: "TRUCHEMENT.Controls.Translate",
+    action: "truchementTranslate",
+    onClick: async () => {
+      await translateDocument(doc);
+      ui.notifications.info(`${t("Notify.Done")} : ${doc.name}`);
+    },
+  });
+});

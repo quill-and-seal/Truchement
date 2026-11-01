@@ -15,7 +15,11 @@
       }
     },
     "Notify": {
-      "Failed": "Truchement n'a pas pu traduire"
+      "Failed": "Truchement n'a pas pu traduire",
+      "Done": "Traduction terminée"
+    },
+    "Controls": {
+      "Translate": "Traduire (Truchement)"
     }
   }
 }

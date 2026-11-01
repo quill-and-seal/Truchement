@@ -15,7 +15,11 @@
       }
     },
     "Notify": {
-      "Failed": "Truchement could not translate"
+      "Failed": "Truchement could not translate",
+      "Done": "Translation done"
+    },
+    "Controls": {
+      "Translate": "Translate (Truchement)"
     }
   }
 }
