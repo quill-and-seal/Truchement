@@ -128,6 +128,9 @@ function collect(root) {
 // sans attendre le modèle, quand la fiche redessine un élément.
 const MEMO = new Map();
 
+// Textes déjà envoyés au modèle : jamais renvoyés une deuxième fois.
+const SENT = new Set();
+
 function remember(en, fr) {
   MEMO.set(en, fr);
   PRODUCED.add(fr);
@@ -150,15 +153,22 @@ export async function translateInterface(root, opts) {
   if (!pending.length) return;
 
   // Le reste passe par les gabarits puis le modèle (textes courts uniquement).
-  const short = pending.filter((t) => t.text.length <= 300);
+  const short = pending.filter((t) => t.text.length <= 300 && !SENT.has(t.text));
   const unique = [...new Set(short.map((t) => t.text))];
+  for (const u of unique) SENT.add(u);
+  if (!unique.length) return;
   const results = await translateSegments(unique, opts);
   const byText = new Map(unique.map((src, i) => [src, results[i]]));
   for (const t of short) {
     const r = byText.get(t.text);
     if (!r || r.layer === "non traduit") continue;
     // Dans l'interface, pas de balise : on retire l'éventuel équivalent de distance.
-    const fr = r.text.replace(/\s*<span class="truchement-alt">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "");
+    const fr = r.text
+      .replace(/\s*<span class="truchement-alt">[^<]*<\/span>/g, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!fr) continue;
     remember(t.text, fr);
     if (t.isConnected()) t.apply(fr);
   }
@@ -179,8 +189,20 @@ export function watchInterface(app, element, opts, onPass) {
   let timer = null;
   let running = false;
   let again = false;
+  // Disjoncteur : si la fiche change sans arrêt (plus de 30 passages en
+  // 5 secondes), on arrête de la suivre plutôt que de tourner en rond.
+  let windowStart = Date.now();
+  let passes = 0;
   const pass = async () => {
     if (running) return void (again = true);
+    if (Date.now() - windowStart > 5000) {
+      windowStart = Date.now();
+      passes = 0;
+    }
+    if (++passes > 30) {
+      console.warn(`${ID} | la fiche change sans arrêt, suivi de l'interface interrompu`);
+      return unwatchInterface(app);
+    }
     running = true;
     try {
       await translateInterface(element, opts);
