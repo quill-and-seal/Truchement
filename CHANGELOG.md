@@ -6,6 +6,12 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.20
+
+### Corrections
+- **Modèle retéléchargé à chaque chargement** quand Foundry est ouvert en `http://` (adresse IP du réseau local) : le cache du navigateur n'existe pas sur une page non sécurisée. Le modèle est désormais gardé dans IndexedDB dans ce cas.
+- La notification « téléchargement du modèle » ne s'affiche plus que lors d'un vrai téléchargement, pas quand le modèle est lu depuis le cache. La console indique d'où il vient (`truchement | modèle prêt …`).
+
 ## 0.2.19
 
 ### Corrections

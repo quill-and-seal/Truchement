@@ -97,14 +97,17 @@ Hooks.once("ready", () => {
 
   // Premier usage : le modèle (~75 Mo) se télécharge, on prévient une fois.
   let warned = false;
+  // Notification seulement pour un vrai téléchargement (pas quand le modèle
+  // vient du cache).
   setCallbacks({
-    progress: () => {
+    download: () => {
       if (warned) return;
       warned = true;
       ui.notifications.info(t("Notify.Downloading"));
     },
-    ready: () => {
-      if (warned) ui.notifications.info(t("Notify.Ready"));
+    ready: ({ downloaded, cache } = {}) => {
+      console.log(`${ID} | modèle prêt (${downloaded ? "téléchargé" : "depuis le cache"}, cache ${cache})`);
+      if (downloaded) ui.notifications.info(t("Notify.Ready"));
     },
   });
 

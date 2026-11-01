@@ -59,7 +59,7 @@ Chaque texte passe par les couches suivantes, dans l'ordre :
 2. **Gabarits de règles** — phrases formulaires (jets de sauvegarde, dégâts, soins, montée en niveau, formules des blocs de stats) reconnues par regex et reconstruites par algorithme, avec accords et genre (`src/engine/patterns.js`).
 3. **Modèle neuronal** — tout le reste : prose, noms, fragments. Modèle Marian `opus-mt-en-fr` exécuté localement avec transformers.js, dans un worker pour ne pas figer Foundry (`src/nmt/worker.js`).
 
-Au premier usage, le modèle (~75 Mo) est téléchargé une fois puis mis en cache par le navigateur. Si le modèle est indisponible, seules les phrases de règles sont traduites.
+Au premier usage, le modèle (~75 Mo) est téléchargé une fois puis mis en cache par le navigateur (Cache API en HTTPS, IndexedDB si Foundry est ouvert en `http://`). Si le modèle est indisponible, seules les phrases de règles sont traduites.
 
 Les jets en ligne (`[[/attack]]`, `[[/damage …]]`), les liens `@UUID[…]` et les balises HTML ne sont jamais modifiés ; seul leur libellé `{…}` est traduit.
 

@@ -7,6 +7,7 @@ const MAX_CACHED = 5000;
 let worker = null;
 let nextId = 0;
 const waiting = new Map();
+let onDownload = () => {};
 let onProgress = () => {};
 let onReady = () => {};
 
@@ -14,8 +15,9 @@ function getWorker() {
   if (worker) return worker;
   worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
   worker.onmessage = ({ data }) => {
+    if (data.type === "download") return onDownload(data);
     if (data.type === "progress") return onProgress(data);
-    if (data.type === "ready") return onReady();
+    if (data.type === "ready") return onReady(data);
     const p = waiting.get(data.id);
     if (!p) return;
     waiting.delete(data.id);
@@ -29,7 +31,8 @@ function getWorker() {
   return worker;
 }
 
-export function setCallbacks({ progress, ready } = {}) {
+export function setCallbacks({ download, progress, ready } = {}) {
+  if (download) onDownload = download;
   if (progress) onProgress = progress;
   if (ready) onReady = ready;
 }
