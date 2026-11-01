@@ -6,6 +6,12 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.17
+
+### Corrections
+- **Captures vides** dans les signalements : la fenêtre, positionnée à l'écran, était dessinée hors du cadre de l'image. La capture se fait désormais sur une copie hors écran ramenée en position 0,0.
+- La fenêtre affichée n'est plus touchée pendant la capture (elle pouvait rester délavée après un signalement).
+
 ## 0.2.16
 
 ### Nouveautés

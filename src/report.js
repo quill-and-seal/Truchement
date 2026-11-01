@@ -16,18 +16,38 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const t = (key) => game.i18n.localize(`TRUCHEMENT.${key}`);
 
 let lib = null;
+// La capture se fait sur une COPIE de la fenêtre, placée hors écran et ramenée
+// en position 0,0 : la fenêtre affichée n'est jamais modifiée, et le rendu ne
+// sort plus du cadre (les fenêtres Foundry sont positionnées par left/top).
 async function screenshot(element) {
   lib ??= import(SCREENSHOT_LIB).catch((err) => {
     lib = null; // nouvel essai au prochain signalement
     throw err;
   });
   const { domToWebp } = await lib;
-  return domToWebp(element, {
-    quality: 0.85,
-    scale: 1,
-    // Le badge et le bouton de signalement n'ont rien à faire sur la capture.
-    filter: (node) => !(node.classList?.contains("truchement-report")),
+
+  const { width, height } = element.getBoundingClientRect();
+  const holder = document.createElement("div");
+  holder.style.cssText = `position:fixed;left:${-width - 200}px;top:0;width:${width}px;height:${height}px;overflow:hidden;pointer-events:none;`;
+  const clone = element.cloneNode(true);
+  clone.removeAttribute("id"); // pas de doublon d'identifiant dans la page
+  clone.querySelectorAll(".truchement-report").forEach((n) => n.remove());
+  Object.assign(clone.style, {
+    position: "relative",
+    left: "0",
+    top: "0",
+    margin: "0",
+    transform: "none",
+    width: `${width}px`,
+    height: `${height}px`,
   });
+  holder.append(clone);
+  document.body.append(holder);
+  try {
+    return await domToWebp(clone, { quality: 0.85, scale: 1, width, height });
+  } finally {
+    holder.remove();
+  }
 }
 
 function sourceOf(doc) {
