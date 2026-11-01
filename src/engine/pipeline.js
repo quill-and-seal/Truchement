@@ -7,7 +7,7 @@
 // `nmt` est une fonction async (textes: string[]) => string[] fournie par
 // l'appelant : le worker transformers.js dans Foundry, un faux modèle en test.
 
-import { matchPattern } from "./patterns.js";
+import { matchPattern, splitSuffix } from "./patterns.js";
 import { feetText, metersText } from "./units.js";
 
 export const CACHE = new Map();
@@ -54,9 +54,17 @@ export async function translateSegments(segments, { nmt, onError } = {}) {
 
   if (pending.length && nmt) {
     const unique = [...new Set(pending.map((i) => segments[i].trim()))];
+    const split = unique.map(splitSuffix);
     try {
-      const out = await nmt(unique);
-      const byText = new Map(unique.map((src, k) => [src, annotateUnits(out[k] ?? src)]));
+      const out = await nmt(split.map((x) => x.body));
+      const byText = new Map(
+        unique.map((src, k) => {
+          // Le modèle remet parfois un point final : on l'enlève avant de recoller la formule.
+          let fr = out[k] ?? split[k].body;
+          if (split[k].suffix) fr = fr.replace(/[.\s]+$/, "") + split[k].suffix;
+          return [src, annotateUnits(fr)];
+        }),
+      );
       for (const [src, fr] of byText) CACHE.set(src, fr);
       for (const i of pending) results[i] = { text: byText.get(segments[i].trim()), layer: "neuronal" };
     } catch (err) {

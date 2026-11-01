@@ -133,6 +133,21 @@ export const PATTERNS = [
   },
 ];
 
+// Formules de règles en fin de phrase : retirées avant le modèle, puis
+// remises en français après sa traduction.
+export const SUFFIXES = [
+  { re: /\s*\((?:round(?:ed)?|rounding) down\)(\.?)\s*$/i, fr: "(arrondi à l'inférieur)" },
+  { re: /\s*\((?:round(?:ed)?|rounding) up\)(\.?)\s*$/i, fr: "(arrondi au supérieur)" },
+];
+
+export function splitSuffix(sentence) {
+  for (const { re, fr } of SUFFIXES) {
+    const m = sentence.match(re);
+    if (m) return { body: sentence.slice(0, m.index), suffix: ` ${fr}${m[1]}` };
+  }
+  return { body: sentence, suffix: "" };
+}
+
 export function matchPattern(sentence) {
   for (const pat of PATTERNS) {
     const m = sentence.match(pat.re);

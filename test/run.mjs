@@ -79,3 +79,10 @@ console.log(`\n=== Bloc de stats ===\n${br.html}`);
 for (const r of br.report) console.log(`  [${r.layer}] ${r.source} → ${r.text}`);
 assert(!br.report.some((r) => r.layer === "neuronal"), "le bloc de stats est entièrement couvert par les gabarits");
 assert(br.html.includes("[[/attack]]{Bonus égal") && br.html.includes("@item.level type=psychic]]{1d8 + 3 + le niveau du sort}"), "les libellés des jets en ligne sont traduits, la commande reste intacte");
+
+// Formule de règle en fin de phrase
+const multi = await translateHtml("<p>The spirit makes a number of attacks equal to half this spell's level (round down).</p>", {
+  nmt: async (texts) => texts.map((t) => `[NMT] ${t}`),
+});
+console.log(`\n=== Multiattack ===\n${multi.html}`);
+assert(multi.html.endsWith("level (arrondi à l'inférieur).</p>") && !multi.html.includes("round down"), "la formule d'arrondi est retirée avant le modèle puis remise en français");
