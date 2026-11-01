@@ -187,8 +187,10 @@ function remember(en, fr) {
 }
 
 // Traduit tout le texte affiché dans `root`. `opts` : options du pipeline (nmt…).
-export async function translateInterface(root, opts) {
+// `isActive()` : faux dès que la fiche repasse en EN, pour ne rien appliquer après coup.
+export async function translateInterface(root, opts, isActive = () => true) {
   await loadInterfaceTranslations();
+  if (!isActive()) return;
   const targets = collect(root);
   if (!targets.length) return;
 
@@ -208,6 +210,7 @@ export async function translateInterface(root, opts) {
   for (const u of unique) SENT.add(u);
   if (!unique.length) return;
   const results = await translateSegments(unique, opts);
+  if (!isActive()) return;
   const byText = new Map(unique.map((src, i) => [src, results[i]]));
   for (const t of short) {
     const r = byText.get(t.text);
@@ -234,16 +237,18 @@ const WATCHERS = new WeakMap();
 export function watchInterface(app, element, opts, onPass) {
   let w = WATCHERS.get(app);
   if (w?.element === element) return w.schedule();
-  w?.observer.disconnect();
+  w?.stop();
 
   let timer = null;
   let running = false;
   let again = false;
+  let stopped = false;
   // Disjoncteur : si la fiche change sans arrêt (plus de 30 passages en
   // 5 secondes), on arrête de la suivre plutôt que de tourner en rond.
   let windowStart = Date.now();
   let passes = 0;
   const pass = async () => {
+    if (stopped) return;
     if (running) return void (again = true);
     if (Date.now() - windowStart > 5000) {
       windowStart = Date.now();
@@ -255,19 +260,26 @@ export function watchInterface(app, element, opts, onPass) {
     }
     running = true;
     try {
-      await translateInterface(element, opts);
-      onPass?.();
+      await translateInterface(element, opts, () => !stopped);
+      if (!stopped) onPass?.();
     } finally {
       running = false;
-      if (again) {
+      if (again && !stopped) {
         again = false;
         schedule();
       }
     }
   };
   const schedule = () => {
+    if (stopped) return;
     clearTimeout(timer);
     timer = setTimeout(pass, 30);
+  };
+  // Arrêt complet : plus d'observation, plus de passage programmé ou en cours.
+  const stop = () => {
+    stopped = true;
+    clearTimeout(timer);
+    observer.disconnect();
   };
 
   const observer = new MutationObserver(schedule);
@@ -278,14 +290,14 @@ export function watchInterface(app, element, opts, onPass) {
     attributes: true,
     attributeFilter: ATTRS,
   });
-  w = { element, observer, schedule };
+  w = { element, observer, schedule, stop };
   WATCHERS.set(app, w);
   schedule();
 }
 
 export function unwatchInterface(app, element) {
   const w = WATCHERS.get(app);
-  w?.observer.disconnect();
+  w?.stop();
   WATCHERS.delete(app);
   // Retour en anglais : on défait ce que Truchement a changé dans la fenêtre.
   const root = w?.element ?? element;
