@@ -26,6 +26,10 @@ La bascule s'applique aussi aux objets d'un acteur et aux pages d'un journal, sa
 
 **Maj+clic** sur le badge : retraduire depuis la version d'origine (utile après une mise à jour du module).
 
+**Alt+clic** sur un libellé traduit de l'interface (MJ) : saisir sa traduction à la main. La correction est enregistrée dans le monde, partagée avec les joueurs, et prime sur le modèle.
+
+Un libellé traduit trop long pour sa place est réduit (jusqu'à 70 %), puis coupé avec « … » ; le texte complet reste en infobulle.
+
 Quand le badge est sur **FR**, toute la fiche passe en français, **interface comprise** (libellés, onglets, infobulles, boutons). Seul l'affichage change ; en mode EN la fiche revient entièrement en anglais. Pour l'interface, Truchement utilise en priorité les fichiers de langue français des modules installés (traductions du cœur de Foundry et du système dnd5e), même si Foundry reste en anglais, puis le modèle pour le reste. Installer ces modules de traduction améliore nettement les libellés courts.
 
 Réglages :

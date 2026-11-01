@@ -4,7 +4,14 @@
 
 import { translateHtml, translateName, CACHE } from "./engine/pipeline.js";
 import { nmt, setCallbacks, loadCache, saveCache } from "./nmt/client.js";
-import { watchInterface, unwatchInterface, loadInterfaceTranslations } from "./ui.js";
+import {
+  watchInterface,
+  unwatchInterface,
+  loadInterfaceTranslations,
+  setCorrectionsProvider,
+  translatedLabelAt,
+  applyCorrection,
+} from "./ui.js";
 
 const ID = "truchement";
 const t = (key) => game.i18n.localize(`TRUCHEMENT.${key}`);
@@ -50,6 +57,14 @@ Hooks.once("init", () => {
     default: true,
   });
 
+  // Corrections de libellés saisies par le MJ (Alt+clic), partagées dans le monde.
+  game.settings.register(ID, "corrections", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+  });
+
   game.settings.register(ID, "showAltUnits", {
     name: "TRUCHEMENT.Settings.ShowAltUnits.Name",
     hint: "TRUCHEMENT.Settings.ShowAltUnits.Hint",
@@ -64,6 +79,7 @@ Hooks.once("init", () => {
 Hooks.once("ready", () => {
   applyAltUnitsClass(setting("showAltUnits"));
   loadCache(CACHE);
+  setCorrectionsProvider(() => setting("corrections") ?? {});
   if (setting("translateInterface")) loadInterfaceTranslations();
 
   // Premier usage : le modèle (~75 Mo) se télécharge, on prévient une fois.
@@ -377,3 +393,37 @@ Hooks.on("renderApplicationV2", (app, element) => {
 });
 
 Hooks.on("closeApplicationV2", (app) => unwatchInterface(app));
+
+// --- Correction d'un libellé (Alt+clic, MJ) ---------------------------------
+
+async function correctLabel(label) {
+  const { DialogV2 } = foundry.applications.api;
+  const esc = (v) => foundry.utils.escapeHTML(v);
+  const fr = await DialogV2.prompt({
+    window: { title: t("Correct.Title") },
+    content: `<p>${t("Correct.Original")} : <strong>${esc(label.en)}</strong></p>
+      <input type="text" name="fr" value="${esc(label.fr)}" autofocus>`,
+    ok: { label: t("Correct.Save"), callback: (_event, button) => button.form.elements.fr.value.trim() },
+    rejectClose: false,
+  });
+  if (!fr) return;
+  const all = { ...(setting("corrections") ?? {}), [label.en]: fr };
+  await game.settings.set(ID, "corrections", all);
+  applyCorrection(label.en, fr);
+  // On remet l'anglais : le suivi de la fiche le retraduit aussitôt avec la
+  // correction, et le retour en EN reste possible.
+  if (label.node.isConnected) label.node.nodeValue = label.node.nodeValue.replace(label.fr, label.en);
+}
+
+document.addEventListener(
+  "click",
+  (ev) => {
+    if (!ev.altKey || !game.user?.isGM) return;
+    const label = translatedLabelAt(ev.target);
+    if (!label) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    correctLabel(label);
+  },
+  true,
+);

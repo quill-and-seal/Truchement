@@ -25,3 +25,10 @@ body.truchement-hide-alt .truchement-alt {
 .truchement-badge.state-en { color: #e6b45c; }
 .truchement-badge.busy i { animation: fa-spin 1s linear infinite; }
 .truchement-badge:disabled:not(.busy) { cursor: default; }
+
+/* Libellé traduit trop long pour sa place : coupé avec « … » (texte complet en infobulle) */
+.truchement-fit {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

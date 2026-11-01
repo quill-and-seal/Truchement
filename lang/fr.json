@@ -33,6 +33,11 @@
       "None": "Truchement : non traduit — cliquer pour traduire",
       "Fr": "Truchement : traduction affichée — clic : voir l'original · Maj+clic : retraduire",
       "En": "Truchement : version d'origine affichée — clic : revenir à la traduction · Maj+clic : retraduire"
+    },
+    "Correct": {
+      "Title": "Truchement : corriger la traduction",
+      "Original": "Texte d'origine",
+      "Save": "Enregistrer"
     }
   }
 }

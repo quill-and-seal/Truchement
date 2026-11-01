@@ -142,9 +142,11 @@ function collect(root) {
       apply: (fr) => {
         const written = lead + fr + trail;
         node.nodeValue = written;
+        ORIGINAL.set(node, raw.trim());
         logChange(root, () => {
           if (node.isConnected && node.nodeValue === written) node.nodeValue = raw;
         });
+        fitToSpace(root, node.parentElement);
       },
       isConnected: () => node.isConnected,
     });
@@ -178,6 +180,56 @@ function collect(root) {
 // sans attendre le modèle, quand la fiche redessine un élément.
 const MEMO = new Map();
 
+// Corrections saisies par le MJ (Alt+clic) : prioritaires sur tout le reste.
+let corrections = () => ({});
+export function setCorrectionsProvider(fn) {
+  corrections = fn;
+}
+
+// Nœud texte → texte anglais d'origine (pour la correction à la main).
+const ORIGINAL = new WeakMap();
+
+// --- Ajustement à la place disponible ---------------------------------------
+// Le français est souvent plus long : si le libellé déborde de son élément,
+// on réduit la police (jusqu'à 70 %), puis on coupe avec « … » et une infobulle.
+
+const MIN_SCALE = 0.7;
+
+function fitToSpace(root, el) {
+  if (!el || el.children.length || !el.isConnected) return;
+  const overflow = el.scrollWidth - el.clientWidth;
+  if (el.clientWidth === 0 || overflow <= 1) return;
+  const prevSize = el.style.fontSize;
+  const prevTooltip = el.getAttribute("data-tooltip");
+  const ratio = el.clientWidth / el.scrollWidth;
+  const size = parseFloat(getComputedStyle(el).fontSize);
+  el.style.fontSize = `${size * Math.max(ratio, MIN_SCALE)}px`;
+  if (ratio < MIN_SCALE) {
+    el.classList.add("truchement-fit");
+    if (!prevTooltip) el.setAttribute("data-tooltip", el.textContent.trim());
+  }
+  logChange(root, () => {
+    el.style.fontSize = prevSize;
+    el.classList.remove("truchement-fit");
+    if (!prevTooltip) el.removeAttribute("data-tooltip");
+  });
+}
+
+// --- Correction à la main (Alt+clic) ------------------------------------------
+
+// Renvoie { en, fr, node } pour le libellé traduit sous le clic, ou null.
+export function translatedLabelAt(target) {
+  for (const node of target?.childNodes ?? []) {
+    if (node.nodeType === 3 && ORIGINAL.has(node)) return { en: ORIGINAL.get(node), fr: node.nodeValue.trim(), node };
+  }
+  return null;
+}
+
+export function applyCorrection(en, fr) {
+  MEMO.set(en, fr);
+  PRODUCED.add(fr);
+}
+
 // Textes déjà envoyés au modèle : jamais renvoyés une deuxième fois.
 const SENT = new Set();
 
@@ -196,7 +248,7 @@ export async function translateInterface(root, opts, isActive = () => true) {
 
   const pending = [];
   for (const t of targets) {
-    const fr = MEMO.get(t.text) ?? lookupOfficial(t.text);
+    const fr = corrections()[t.text] ?? MEMO.get(t.text) ?? lookupOfficial(t.text);
     if (fr) {
       remember(t.text, fr);
       t.apply(fr);

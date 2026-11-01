@@ -33,6 +33,11 @@
       "None": "Truchement: not translated — click to translate",
       "Fr": "Truchement: translation shown — click: see the original · Shift+click: retranslate",
       "En": "Truchement: original shown — click: back to the translation · Shift+click: retranslate"
+    },
+    "Correct": {
+      "Title": "Truchement: correct the translation",
+      "Original": "Original text",
+      "Save": "Save"
     }
   }
 }
