@@ -6,6 +6,15 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.14
+
+### Corrections
+- **Import Plutonium** : Truchement traduisait le document provisoire (« Importing... ») et écrasait le vrai nom. Il attend désormais que l'import soit terminé (1,5 s sans modification) avant de traduire, et vérifie que rien n'a changé pendant la traduction avant d'écrire.
+- Les textes ajoutés par Plutonium après la création (langues, sens…) sont maintenant traduits.
+
+### Nouveautés
+- Glossaire : armes, armures, équipement courant, catégories d'armes (Courante, De guerre), quelques créatures (270 termes).
+
 ## 0.2.13
 
 ### Nouveautés

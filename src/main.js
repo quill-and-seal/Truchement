@@ -133,9 +133,16 @@ const HTML_FIELDS = {
   ],
 };
 
+// Renvoyé quand le document a changé pendant la traduction (import en cours) :
+// rien n'est écrit, la traduction sera relancée.
+const STALE = Symbol("stale");
+
 async function translateFields(doc, fields) {
   const update = {};
   const original = {};
+  // Photo des textes source, pour vérifier à la fin qu'ils n'ont pas bougé.
+  const before = { name: doc.name };
+  for (const path of fields) before[path] = foundry.utils.getProperty(doc, path);
 
   const frName = await translateName(doc.name, OPTS);
   if (frName && frName !== doc.name) {
@@ -150,6 +157,13 @@ async function translateFields(doc, fields) {
     if (fr !== html) {
       update[path] = fr;
       original[path] = html;
+    }
+  }
+
+  for (const [path, value] of Object.entries(before)) {
+    if (foundry.utils.getProperty(doc, path) !== value) {
+      console.log(`${ID} | « ${doc.name} » a changé pendant la traduction, on recommence plus tard`);
+      return STALE;
     }
   }
 
@@ -186,6 +200,7 @@ async function translateDocumentInner(doc) {
   if (doc.documentName === "Actor") return translateActor(doc);
   if (doc.documentName === "JournalEntry") return translateJournal(doc);
   const update = await translateFields(doc, HTML_FIELDS[doc.documentName] ?? []);
+  if (update === STALE) return STALE;
   if (update) await doc.update(update);
   console.log(`${ID} | « ${doc.name} » : ${update ? "traduit" : "rien à traduire"}`);
   return update ? 1 : 0;
@@ -193,8 +208,10 @@ async function translateDocumentInner(doc) {
 
 async function translateActor(actor) {
   const update = await translateFields(actor, HTML_FIELDS.Actor);
+  if (update === STALE) return STALE;
   if (update) await actor.update(update);
   let n = update ? 1 : 0;
+  let stale = false;
 
   // Objets embarqués (attaques, sorts, traits…) : créés avec l'acteur,
   // ils ne déclenchent pas createItem, on les traite ici.
@@ -202,9 +219,11 @@ async function translateActor(actor) {
   for (const item of actor.items) {
     if (item.getFlag(ID, "translated")) continue;
     const u = await translateFields(item, HTML_FIELDS.Item);
-    if (u) items.push({ _id: item.id, ...u });
+    if (u === STALE) stale = true;
+    else if (u) items.push({ _id: item.id, ...u });
   }
   if (items.length) await actor.updateEmbeddedDocuments("Item", items);
+  if (stale) return STALE; // les objets restants seront traduits au prochain passage
   if (!update && items.length) await actor.setFlag(ID, "showing", "fr");
   console.log(`${ID} | acteur « ${actor.name} » : ${items.length}/${actor.items.size} objets traduits`);
   return n + items.length;
@@ -299,12 +318,43 @@ export async function revertDocument(doc) {
 
 // --- Hooks de création ----------------------------------------------------
 
+// Plutonium crée d'abord un document provisoire (« Importing... »), puis le
+// renomme et le remplit en plusieurs étapes. On attend que le document ne
+// bouge plus pendant QUIET_MS avant de le traduire.
+const QUIET_MS = 1500;
+const PENDING = new Map(); // uuid → { doc, timer }
+
+function scheduleTranslate(doc) {
+  const entry = PENDING.get(doc.uuid);
+  clearTimeout(entry?.timer);
+  const timer = setTimeout(async () => {
+    PENDING.delete(doc.uuid);
+    try {
+      const n = await translateDocument(doc);
+      if (n === STALE) scheduleTranslate(doc);
+    } catch (err) {
+      console.error(`${ID} | échec de traduction pour « ${doc.name} »`, err);
+      ui.notifications.warn(`${t("Notify.Failed")} : ${doc.name}`);
+    }
+  }, QUIET_MS);
+  PENDING.set(doc.uuid, { doc, timer });
+}
+
+// Toute modification d'un document en attente (ou de ses enfants) relance l'attente.
+function bumpPending(doc) {
+  for (let d = doc; d; d = d.parent) {
+    if (PENDING.has(d.uuid)) return scheduleTranslate(PENDING.get(d.uuid).doc);
+  }
+}
+
 function onCreate(doc, _options, userId) {
+  if (doc.parent && PENDING.has(doc.parent.uuid)) return bumpPending(doc); // traité avec son parent
   if (!shouldTranslate(doc, userId)) return;
-  translateDocument(doc).catch((err) => {
-    console.error(`${ID} | échec de traduction pour « ${doc.name} »`, err);
-    ui.notifications.warn(`${t("Notify.Failed")} : ${doc.name}`);
-  });
+  scheduleTranslate(doc);
+}
+
+for (const hook of ["updateActor", "updateItem", "deleteItem", "updateJournalEntry", "createJournalEntryPage", "updateJournalEntryPage"]) {
+  Hooks.on(hook, (doc) => bumpPending(doc));
 }
 
 Hooks.on("createItem", (item, options, userId) => {
@@ -321,6 +371,7 @@ Hooks.on("createJournalEntry", onCreate);
 async function onTranslateClick(doc) {
   try {
     const n = await translateDocument(doc);
+    if (n === STALE) return scheduleTranslate(doc);
     if (n) ui.notifications.info(`${t("Notify.Done")} : ${doc.name} (${n})`);
     else ui.notifications.warn(`${t("Notify.Nothing")} : ${doc.name}`);
   } catch (err) {

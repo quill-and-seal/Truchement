@@ -14,7 +14,7 @@ https://github.com/quill-and-seal/Truchement/releases/latest/download/module.jso
 
 ## Fonctionnement
 
-À la création d'un objet, d'un acteur (avec ses objets embarqués) ou d'un journal, Truchement traduit le nom et la description, puis met à jour le document. Le texte anglais d'origine est conservé dans `flags.truchement.original`.
+À la création d'un objet, d'un acteur (avec ses objets embarqués) ou d'un journal, Truchement attend la fin de l'import (1,5 s sans modification), traduit le nom et la description, vérifie que rien n'a changé entre-temps, puis met à jour le document. Le texte anglais d'origine est conservé dans `flags.truchement.original`.
 
 **Badge d'état** dans l'en-tête de chaque fiche (acteur, objet, journal) :
 
