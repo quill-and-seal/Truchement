@@ -1,0 +1,5 @@
+/* Équivalent de distance dans l'unité opposée, affiché en petit */
+.truchement-alt {
+  font-size: 0.8em;
+  opacity: 0.7;
+}

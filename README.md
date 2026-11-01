@@ -13,7 +13,7 @@ Chaque phrase descend quatre couches jusqu'à ce que l'une d'elles la traite :
 3. **Dictionnaire** — termes de jeu, expressions figées, genre des noms (`src/engine/glossary.js`)
 4. **Moteur neuronal** — secours pour la prose libre, termes protégés par marqueurs (à brancher)
 
-Les distances restent dans l'unité du texte source (pieds).
+Les distances restent dans l'unité du texte source, avec l'équivalent dans l'unité opposée affiché en petit (calcul exact, 1 pied = 0,3048 m).
 
 ## Tester
 
