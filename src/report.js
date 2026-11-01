@@ -13,6 +13,18 @@ const SCREENSHOT_LIB = "https://cdn.jsdelivr.net/npm/modern-screenshot@4.6.8/dis
 const SETTLE_MS = 1200; // le temps que la fiche se redessine et que l'interface soit traduite
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const FADE_MS = 500; // durée du fondu actif/inactif des fenêtres
+
+// Remet la fiche au premier plan (fenêtre active) puis attend la fin du fondu.
+async function focusSheet(app, delay = FADE_MS) {
+  try {
+    app.bringToFront?.();
+    app.element?.focus?.({ preventScroll: true });
+  } catch {
+    /* sans conséquence */
+  }
+  if (delay) await wait(delay);
+}
 const t = (key) => game.i18n.localize(`TRUCHEMENT.${key}`);
 
 let lib = null;
@@ -93,6 +105,10 @@ export async function reportDocument(app, doc, url, api) {
   const screenshots = {};
   const start = api.stateOf(doc);
   try {
+    // La fenêtre de remarque a fait passer la fiche en arrière-plan : certaines
+    // fiches (Tidy5e) l'affichent alors délavée. On la remet au premier plan et
+    // on attend la fin du fondu avant chaque capture.
+    await focusSheet(app);
     if (start === "none") {
       screenshots.en = await screenshot(app.element);
     } else {
@@ -100,9 +116,11 @@ export async function reportDocument(app, doc, url, api) {
       screenshots[start] = await screenshot(app.element);
       await api.toggleDocument(doc);
       await wait(SETTLE_MS);
+      await focusSheet(app);
       screenshots[start === "fr" ? "en" : "fr"] = await screenshot(app.element);
       await api.toggleDocument(doc);
     }
+    await focusSheet(app, 0);
   } catch (err) {
     console.warn(`${ID} | capture impossible, signalement envoyé sans image`, err);
     if (api.stateOf(doc) !== start && start !== "none") await api.toggleDocument(doc).catch(() => {});

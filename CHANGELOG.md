@@ -6,6 +6,11 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.18
+
+### Corrections
+- **Fiche délavée après un signalement** (et capture EN délavée) : la fenêtre de remarque faisait passer la fiche en arrière-plan. Elle est maintenant remise au premier plan avant chaque capture et à la fin du signalement.
+
 ## 0.2.17
 
 ### Corrections
