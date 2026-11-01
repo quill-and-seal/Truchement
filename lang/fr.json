@@ -12,6 +12,10 @@
       "ShowAltUnits": {
         "Name": "Afficher l'équivalent des distances",
         "Hint": "Affiche en petit la distance dans l'unité opposée (pieds ↔ mètres)."
+      },
+      "TranslateInterface": {
+        "Name": "Traduire l'interface des fiches",
+        "Hint": "Quand le badge est sur FR, traduit aussi les libellés, onglets et infobulles de la fiche (d'après les fichiers de langue français installés, sinon par le modèle)."
       }
     },
     "Notify": {

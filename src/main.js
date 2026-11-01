@@ -4,6 +4,7 @@
 
 import { translateHtml, translateName, CACHE } from "./engine/pipeline.js";
 import { nmt, setCallbacks, loadCache, saveCache } from "./nmt/client.js";
+import { translateInterface, loadInterfaceTranslations } from "./ui.js";
 
 const ID = "truchement";
 const t = (key) => game.i18n.localize(`TRUCHEMENT.${key}`);
@@ -40,6 +41,15 @@ Hooks.once("init", () => {
     default: true,
   });
 
+  game.settings.register(ID, "translateInterface", {
+    name: "TRUCHEMENT.Settings.TranslateInterface.Name",
+    hint: "TRUCHEMENT.Settings.TranslateInterface.Hint",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true,
+  });
+
   game.settings.register(ID, "showAltUnits", {
     name: "TRUCHEMENT.Settings.ShowAltUnits.Name",
     hint: "TRUCHEMENT.Settings.ShowAltUnits.Hint",
@@ -54,6 +64,7 @@ Hooks.once("init", () => {
 Hooks.once("ready", () => {
   applyAltUnitsClass(setting("showAltUnits"));
   loadCache(CACHE);
+  if (setting("translateInterface")) loadInterfaceTranslations();
 
   // Premier usage : le modèle (~75 Mo) se télécharge, on prévient une fois.
   let warned = false;
@@ -356,4 +367,11 @@ Hooks.on("renderApplicationV2", (app, element) => {
   const anchor = header.querySelector('[data-action="toggleControls"]') ?? header.querySelector('[data-action="close"]');
   if (anchor) anchor.before(btn);
   else header.append(btn);
+
+  // Badge sur FR : toute la fiche passe en français, interface comprise.
+  if (state === "fr" && setting("translateInterface")) {
+    translateInterface(element, OPTS)
+      .catch((err) => console.error(`${ID} | traduction de l'interface`, err))
+      .finally(() => saveCache(CACHE));
+  }
 });

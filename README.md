@@ -26,12 +26,13 @@ La bascule s'applique aussi aux objets d'un acteur et aux pages d'un journal, sa
 
 **Maj+clic** sur le badge : retraduire depuis la version d'origine (utile après une mise à jour du module).
 
-Truchement traduit le **contenu** des documents (noms, descriptions, textes libres des traits comme les langues ou sens spéciaux). Les libellés de l'interface des fiches (« Speed », « Darkvision », types de dégâts, infobulles…) relèvent de la langue de Foundry et des modules de traduction française du cœur et du système dnd5e.
+Quand le badge est sur **FR**, toute la fiche passe en français, **interface comprise** (libellés, onglets, infobulles, boutons). Seul l'affichage change ; en mode EN la fiche revient entièrement en anglais. Pour l'interface, Truchement utilise en priorité les fichiers de langue français des modules installés (traductions du cœur de Foundry et du système dnd5e), même si Foundry reste en anglais, puis le modèle pour le reste. Installer ces modules de traduction améliore nettement les libellés courts.
 
 Réglages :
 
 - **Traduction automatique** — active ou coupe la traduction à l'import.
 - **Uniquement les imports Plutonium** — ne traduit que les documents portant les flags de Plutonium.
+- **Traduire l'interface des fiches** — traduit aussi les libellés de la fiche quand le badge est sur FR (réglage par joueur).
 - **Afficher l'équivalent des distances** — affiche en petit la distance dans l'unité opposée (réglage par joueur).
 
 API, depuis une macro :
