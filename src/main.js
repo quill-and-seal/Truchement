@@ -4,7 +4,7 @@
 
 import { translateHtml, translateName, CACHE } from "./engine/pipeline.js";
 import { nmt, setCallbacks, loadCache, saveCache } from "./nmt/client.js";
-import { translateInterface, loadInterfaceTranslations } from "./ui.js";
+import { watchInterface, unwatchInterface, loadInterfaceTranslations } from "./ui.js";
 
 const ID = "truchement";
 const t = (key) => game.i18n.localize(`TRUCHEMENT.${key}`);
@@ -370,8 +370,10 @@ Hooks.on("renderApplicationV2", (app, element) => {
 
   // Badge sur FR : toute la fiche passe en français, interface comprise.
   if (state === "fr" && setting("translateInterface")) {
-    translateInterface(element, OPTS)
-      .catch((err) => console.error(`${ID} | traduction de l'interface`, err))
-      .finally(() => saveCache(CACHE));
+    watchInterface(app, element, OPTS, () => saveCache(CACHE));
+  } else {
+    unwatchInterface(app);
   }
 });
+
+Hooks.on("closeApplicationV2", (app) => unwatchInterface(app));

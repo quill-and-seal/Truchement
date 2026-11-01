@@ -107,7 +107,7 @@ function collect(root) {
     if (!candidate(raw)) continue;
     const lead = raw.match(/^\s*/)[0];
     const trail = raw.match(/\s*$/)[0];
-    targets.push({ text: raw.trim(), apply: (fr) => (node.nodeValue = lead + fr + trail) });
+    targets.push({ text: raw.trim(), apply: (fr) => (node.nodeValue = lead + fr + trail), isConnected: () => node.isConnected });
   }
 
   for (const el of root.querySelectorAll(ATTRS.map((a) => `[${a}]`).join(","))) {
@@ -118,10 +118,19 @@ function collect(root) {
       // Infobulle donnée par clé de traduction : Foundry la traduirait à l'affichage.
       if (I18N_KEY.test(value) && game.i18n.has(value)) value = game.i18n.localize(value);
       if (/<[^>]+>/.test(value) || !candidate(value)) continue;
-      targets.push({ text: value.trim(), apply: (fr) => el.setAttribute(attr, fr) });
+      targets.push({ text: value.trim(), apply: (fr) => el.setAttribute(attr, fr), isConnected: () => el.isConnected });
     }
   }
   return targets;
+}
+
+// Mémoire anglais → français de l'interface : appliquée immédiatement,
+// sans attendre le modèle, quand la fiche redessine un élément.
+const MEMO = new Map();
+
+function remember(en, fr) {
+  MEMO.set(en, fr);
+  PRODUCED.add(fr);
 }
 
 // Traduit tout le texte affiché dans `root`. `opts` : options du pipeline (nmt…).
@@ -132,9 +141,9 @@ export async function translateInterface(root, opts) {
 
   const pending = [];
   for (const t of targets) {
-    const fr = lookupOfficial(t.text);
+    const fr = MEMO.get(t.text) ?? lookupOfficial(t.text);
     if (fr) {
-      PRODUCED.add(fr);
+      remember(t.text, fr);
       t.apply(fr);
     } else pending.push(t);
   }
@@ -150,7 +159,59 @@ export async function translateInterface(root, opts) {
     if (!r || r.layer === "non traduit") continue;
     // Dans l'interface, pas de balise : on retire l'éventuel équivalent de distance.
     const fr = r.text.replace(/\s*<span class="truchement-alt">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "");
-    PRODUCED.add(fr);
-    t.apply(fr);
+    remember(t.text, fr);
+    if (t.isConnected()) t.apply(fr);
   }
+}
+
+// --- Suivi des fiches -------------------------------------------------------
+// Les fiches réactives (Tidy5e/Svelte…) redessinent leurs éléments après le
+// rendu et remettent l'anglais. On observe la fenêtre tant qu'elle est en FR
+// et on retraduit ce qui change.
+
+const WATCHERS = new WeakMap();
+
+export function watchInterface(app, element, opts, onPass) {
+  let w = WATCHERS.get(app);
+  if (w?.element === element) return w.schedule();
+  w?.observer.disconnect();
+
+  let timer = null;
+  let running = false;
+  let again = false;
+  const pass = async () => {
+    if (running) return void (again = true);
+    running = true;
+    try {
+      await translateInterface(element, opts);
+      onPass?.();
+    } finally {
+      running = false;
+      if (again) {
+        again = false;
+        schedule();
+      }
+    }
+  };
+  const schedule = () => {
+    clearTimeout(timer);
+    timer = setTimeout(pass, 30);
+  };
+
+  const observer = new MutationObserver(schedule);
+  observer.observe(element, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ATTRS,
+  });
+  w = { element, observer, schedule };
+  WATCHERS.set(app, w);
+  schedule();
+}
+
+export function unwatchInterface(app) {
+  WATCHERS.get(app)?.observer.disconnect();
+  WATCHERS.delete(app);
 }
