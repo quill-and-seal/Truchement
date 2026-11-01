@@ -9,7 +9,7 @@ Aucun texte traduit n'est distribué : la traduction se fait localement, chez ch
 Dans Foundry, *Modules complémentaires → Installer un module*, coller le lien du manifeste :
 
 ```
-https://github.com/quill-and-seal/truchement/releases/latest/download/module.json
+https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 ```
 
 ## Fonctionnement
