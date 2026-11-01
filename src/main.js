@@ -11,6 +11,7 @@ import {
   setCorrectionsProvider,
   translatedLabelAt,
   applyCorrection,
+  initTooltips,
 } from "./ui.js";
 
 const ID = "truchement";
@@ -80,6 +81,7 @@ Hooks.once("ready", () => {
   applyAltUnitsClass(setting("showAltUnits"));
   loadCache(CACHE);
   setCorrectionsProvider(() => setting("corrections") ?? {});
+  initTooltips();
   if (setting("translateInterface")) loadInterfaceTranslations();
 
   // Premier usage : le modèle (~75 Mo) se télécharge, on prévient une fois.

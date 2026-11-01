@@ -30,7 +30,7 @@ La bascule s'applique aussi aux objets d'un acteur et aux pages d'un journal, sa
 
 Un libellé traduit trop long pour sa place est réduit (jusqu'à 70 %), puis coupé avec « … » ; le texte complet reste en infobulle.
 
-Quand le badge est sur **FR**, toute la fiche passe en français, **interface comprise** (libellés, onglets, infobulles, boutons). Seul l'affichage change ; en mode EN la fiche revient entièrement en anglais. Pour l'interface, Truchement utilise en priorité les fichiers de langue français des modules installés (traductions du cœur de Foundry et du système dnd5e), même si Foundry reste en anglais, puis le modèle pour le reste. Installer ces modules de traduction améliore nettement les libellés courts.
+Quand le badge est sur **FR**, toute la fiche passe en français, **interface comprise** (libellés, onglets, infobulles, boutons). Seul l'affichage change ; en mode EN la fiche revient entièrement en anglais. Seuls les libellés d'interface connus de Foundry (cœur, système, modules) sont traduits à l'affichage ; le contenu de la fiche (noms, descriptions) n'est jamais retraité par cette partie. L'infobulle des objets suit aussi le mode FR. Pour l'interface, Truchement utilise en priorité les fichiers de langue français des modules installés (traductions du cœur de Foundry et du système dnd5e), même si Foundry reste en anglais, puis le modèle pour le reste. Installer ces modules de traduction améliore nettement les libellés courts.
 
 Réglages :
 

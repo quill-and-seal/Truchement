@@ -18,6 +18,11 @@ const EXACT = new Map();
 const TEMPLATED = [];
 // Tout texte déjà produit en français, pour ne jamais le retraduire.
 const PRODUCED = new Set();
+// Libellés d'interface anglais connus de Foundry (cœur, système, modules) :
+// SEULS ces textes sont traduits dans l'interface. Le contenu de la fiche
+// (noms, descriptions, textes saisis) n'y figure pas et n'est jamais touché ici.
+const EN_VALUES = new Set();
+const EN_TEMPLATES = []; // RegExp des libellés à variables
 
 let ready = null;
 
@@ -46,6 +51,18 @@ export function loadInterfaceTranslations() {
   ready ??= (async () => {
     if (game.i18n.lang === "fr") return; // l'interface est déjà en français
     const english = foundry.utils.flattenObject(game.i18n.translations);
+    for (const en of Object.values(english)) {
+      if (typeof en !== "string" || !en.trim()) continue;
+      if (!en.includes("{")) {
+        EN_VALUES.add(en.trim());
+        continue;
+      }
+      // Libellé à variables : retenu s'il a assez de texte fixe pour être reconnaissable.
+      const fixed = en.replace(/\{\w+\}/g, "");
+      if ((fixed.match(/[A-Za-z]/g) ?? []).length < 4) continue;
+      const src = escapeRe(en.trim()).replace(/\\\{\w+\\\}/g, "(.+?)");
+      EN_TEMPLATES.push(new RegExp(`^${src}$`));
+    }
     const french = {};
     for (const path of packageLanguageFiles()) {
       try {
@@ -66,7 +83,9 @@ export function loadInterfaceTranslations() {
         EXACT.set(en, fr);
       }
     }
-    console.log(`${ID} | interface : ${EXACT.size} libellés et ${TEMPLATED.length} formules depuis ${packageLanguageFiles().length} fichier(s) de langue FR`);
+    console.log(
+      `${ID} | interface : ${EN_VALUES.size} libellés anglais reconnus ; ${EXACT.size} libellés et ${TEMPLATED.length} formules FR depuis ${packageLanguageFiles().length} fichier(s) de langue FR`,
+    );
   })();
   return ready;
 }
@@ -111,6 +130,33 @@ function candidate(text) {
   return true;
 }
 
+function isInterfaceText(t) {
+  if (EN_VALUES.has(t)) return true;
+  return EN_TEMPLATES.some((re) => re.test(t));
+}
+
+// Découpe un texte en morceaux ; les morceaux d'indice pair sont des libellés
+// à traduire, les impairs des séparateurs (« Natural • Action »). Renvoie null
+// si aucun morceau n'est un libellé d'interface connu.
+const SEP = /(\s*[•·|]\s*)/;
+function interfaceParts(text) {
+  if (!candidate(text)) return null;
+  if (isInterfaceText(text)) return [text];
+  const parts = text.split(SEP);
+  if (parts.length < 3) return null;
+  const found = parts.some((p, i) => i % 2 === 0 && candidate(p) && isInterfaceText(p.trim()));
+  return found ? parts : null;
+}
+
+// Libellés à traduire dans un découpage.
+function unitsOf(parts) {
+  return parts.filter((p, i) => i % 2 === 0 && candidate(p) && isInterfaceText(p.trim())).map((p) => p.trim());
+}
+
+function compose(parts, tr) {
+  return parts.map((p, i) => (i % 2 === 0 && tr.has(p.trim()) ? p.replace(p.trim(), tr.get(p.trim())) : p)).join("");
+}
+
 // Journal des remplacements par fenêtre, pour tout remettre en anglais.
 const JOURNAL = new WeakMap();
 
@@ -134,11 +180,13 @@ function collect(root) {
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (node.parentElement?.closest(SKIP)) continue;
     const raw = node.nodeValue;
-    if (!candidate(raw)) continue;
+    const parts = interfaceParts(raw.trim());
+    if (!parts) continue;
     const lead = raw.match(/^\s*/)[0];
     const trail = raw.match(/\s*$/)[0];
     targets.push({
       text: raw.trim(),
+      parts,
       apply: (fr) => {
         const written = lead + fr + trail;
         node.nodeValue = written;
@@ -160,9 +208,12 @@ function collect(root) {
       if (!value) continue;
       // Infobulle donnée par clé de traduction : Foundry la traduirait à l'affichage.
       if (I18N_KEY.test(value) && game.i18n.has(value)) value = game.i18n.localize(value);
-      if (/<[^>]+>/.test(value) || !candidate(value)) continue;
+      if (/<[^>]+>/.test(value)) continue;
+      const parts = interfaceParts(value.trim());
+      if (!parts) continue;
       targets.push({
         text: value.trim(),
+        parts,
         apply: (fr) => {
           el.setAttribute(attr, fr);
           logChange(root, () => {
@@ -238,7 +289,7 @@ function remember(en, fr) {
   PRODUCED.add(fr);
 }
 
-// Traduit tout le texte affiché dans `root`. `opts` : options du pipeline (nmt…).
+// Traduit les libellés d'interface affichés dans `root`. `opts` : options du pipeline (nmt…).
 // `isActive()` : faux dès que la fiche repasse en EN, pour ne rien appliquer après coup.
 export async function translateInterface(root, opts, isActive = () => true) {
   await loadInterfaceTranslations();
@@ -246,37 +297,56 @@ export async function translateInterface(root, opts, isActive = () => true) {
   const targets = collect(root);
   if (!targets.length) return;
 
-  const pending = [];
+  // Résolution des libellés : correction du MJ, mémoire, traduction officielle.
+  const tr = new Map();
+  const pending = new Set();
   for (const t of targets) {
-    const fr = corrections()[t.text] ?? MEMO.get(t.text) ?? lookupOfficial(t.text);
-    if (fr) {
-      remember(t.text, fr);
-      t.apply(fr);
-    } else pending.push(t);
+    for (const u of unitsOf(t.parts)) {
+      if (tr.has(u)) continue;
+      const fr = corrections()[u] ?? MEMO.get(u) ?? lookupOfficial(u);
+      if (fr) {
+        tr.set(u, fr);
+        remember(u, fr);
+      } else pending.add(u);
+    }
   }
-  if (!pending.length) return;
 
-  // Le reste passe par les gabarits puis le modèle (textes courts uniquement).
-  const short = pending.filter((t) => t.text.length <= 300 && !SENT.has(t.text));
-  const unique = [...new Set(short.map((t) => t.text))];
-  for (const u of unique) SENT.add(u);
-  if (!unique.length) return;
-  const results = await translateSegments(unique, opts);
-  if (!isActive()) return;
-  const byText = new Map(unique.map((src, i) => [src, results[i]]));
-  for (const t of short) {
-    const r = byText.get(t.text);
-    if (!r || r.layer === "non traduit") continue;
-    // Dans l'interface, pas de balise : on retire l'éventuel équivalent de distance.
-    const fr = r.text
-      .replace(/\s*<span class="truchement-alt">[^<]*<\/span>/g, "")
-      .replace(/<[^>]+>/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!fr) continue;
-    remember(t.text, fr);
-    if (t.isConnected()) t.apply(fr);
+  const done = new Set();
+  const applyResolved = (final) => {
+    for (const t of targets) {
+      if (done.has(t) || !t.isConnected()) continue;
+      const units = unitsOf(t.parts);
+      if (!final && !units.every((u) => tr.has(u))) continue;
+      done.add(t);
+      const fr = compose(t.parts, tr);
+      if (fr === t.text) continue;
+      PRODUCED.add(fr);
+      t.apply(fr);
+    }
+  };
+  applyResolved(false);
+
+  // Le reste passe par les gabarits puis le modèle.
+  const toSend = [...pending].filter((u) => u.length <= 300 && !SENT.has(u));
+  for (const u of toSend) SENT.add(u);
+  if (toSend.length) {
+    const results = await translateSegments(toSend, opts);
+    if (!isActive()) return;
+    toSend.forEach((u, i) => {
+      const r = results[i];
+      if (!r || r.layer === "non traduit") return;
+      // Dans l'interface, pas de balise : on retire l'éventuel équivalent de distance.
+      const fr = r.text
+        .replace(/\s*<span class="truchement-alt">[^<]*<\/span>/g, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!fr) return;
+      tr.set(u, fr);
+      remember(u, fr);
+    });
   }
+  applyResolved(true);
 }
 
 // --- Suivi des fiches -------------------------------------------------------
@@ -285,6 +355,9 @@ export async function translateInterface(root, opts, isActive = () => true) {
 // et on retraduit ce qui change.
 
 const WATCHERS = new WeakMap();
+// Fenêtres actuellement en FR (pour les infobulles qui s'affichent hors fenêtre).
+const ACTIVE_ROOTS = new Set();
+let tooltipOpts = null;
 
 export function watchInterface(app, element, opts, onPass) {
   let w = WATCHERS.get(app);
@@ -330,6 +403,7 @@ export function watchInterface(app, element, opts, onPass) {
   // Arrêt complet : plus d'observation, plus de passage programmé ou en cours.
   const stop = () => {
     stopped = true;
+    ACTIVE_ROOTS.delete(element);
     clearTimeout(timer);
     observer.disconnect();
   };
@@ -342,6 +416,8 @@ export function watchInterface(app, element, opts, onPass) {
     attributes: true,
     attributeFilter: ATTRS,
   });
+  ACTIVE_ROOTS.add(element);
+  tooltipOpts = opts;
   w = { element, observer, schedule, stop };
   WATCHERS.set(app, w);
   schedule();
@@ -354,4 +430,30 @@ export function unwatchInterface(app, element) {
   // Retour en anglais : on défait ce que Truchement a changé dans la fenêtre.
   const root = w?.element ?? element;
   if (root) restoreInterface(root);
+}
+
+// --- Infobulles ---------------------------------------------------------------
+// L'infobulle de Foundry (#tooltip) s'affiche hors de la fenêtre : on traduit
+// ses libellés quand la souris survole une fiche en FR. Les infobulles
+// verrouillées (clic molette) sont des copies de celle-ci, déjà traduite.
+
+export function initTooltips() {
+  let hoverInFr = false;
+  document.addEventListener(
+    "pointerover",
+    (ev) => {
+      const t = ev.target;
+      if (t?.closest?.("#tooltip, .locked-tooltip")) return; // on garde l'état du survol précédent
+      hoverInFr = [...ACTIVE_ROOTS].some((root) => root.contains(t));
+    },
+    true,
+  );
+  const el = globalThis.game?.tooltip?.element ?? document.getElementById("tooltip");
+  if (!el) return;
+  let timer = null;
+  new MutationObserver(() => {
+    if (!hoverInFr || !tooltipOpts) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => translateInterface(el, tooltipOpts, () => hoverInFr).catch(() => {}), 10);
+  }).observe(el, { childList: true, subtree: true, characterData: true });
 }
