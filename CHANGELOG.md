@@ -6,6 +6,12 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.19
+
+### Corrections
+- **Thème de Foundry abîmé après un signalement** (fiche délavée jusqu'au rechargement F5) : la bibliothèque de capture réinjectait le contenu des `@import` dans les feuilles de style de la page pour retrouver les polices. Truchement lui fournit désormais lui-même les polices utilisées par la fiche ; les feuilles de style de la page ne sont plus modifiées.
+- **Icônes en carrés** sur les captures : les polices d'icônes sont maintenant embarquées.
+
 ## 0.2.18
 
 ### Corrections

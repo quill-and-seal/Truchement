@@ -28,6 +28,90 @@ async function focusSheet(app, delay = FADE_MS) {
 const t = (key) => game.i18n.localize(`TRUCHEMENT.${key}`);
 
 let lib = null;
+// --- Polices ---------------------------------------------------------------------
+// Sans polices fournies, la bibliothèque de capture réinjecte le contenu des
+// @import dans les feuilles de style de la page, ce qui bouleverse le thème de
+// Foundry jusqu'au rechargement. On lui donne donc nous-mêmes les @font-face
+// utilisées par la fiche, en data URL (lecture seule des feuilles de style).
+
+const FONT_DATA = new Map(); // url → data URL
+
+function* fontFaceRules(rules) {
+  for (const rule of rules ?? []) {
+    if (rule instanceof CSSFontFaceRule) yield rule;
+    else if (rule instanceof CSSImportRule) {
+      try {
+        yield* fontFaceRules(rule.styleSheet?.cssRules);
+      } catch {
+        /* feuille d'une autre origine : ignorée */
+      }
+    } else if (rule.cssRules) yield* fontFaceRules(rule.cssRules);
+  }
+}
+
+function usedFamilies(root) {
+  const families = new Set();
+  const add = (value) => {
+    for (const f of String(value).split(",")) families.add(f.trim().replace(/^["']|["']$/g, "").toLowerCase());
+  };
+  for (const el of [root, ...root.querySelectorAll("*")]) {
+    add(getComputedStyle(el).fontFamily);
+    add(getComputedStyle(el, "::before").fontFamily);
+    add(getComputedStyle(el, "::after").fontFamily);
+  }
+  return families;
+}
+
+async function toDataUrl(url) {
+  if (!FONT_DATA.has(url)) {
+    FONT_DATA.set(
+      url,
+      fetch(url)
+        .then((r) => (r.ok ? r.blob() : null))
+        .then((blob) => blob && new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        }))
+        .catch(() => null),
+    );
+  }
+  return FONT_DATA.get(url);
+}
+
+async function fontCss(root) {
+  const families = usedFamilies(root);
+  const parts = [];
+  for (const sheet of document.styleSheets) {
+    let rules;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of fontFaceRules(rules)) {
+      const style = rule.style;
+      const family = style.getPropertyValue("font-family").trim().replace(/^["']|["']$/g, "");
+      if (!families.has(family.toLowerCase())) continue;
+      const src = style.getPropertyValue("src");
+      // On préfère woff2, sinon la première source.
+      const urls = [...src.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)(?:\s*format\(\s*["']?([\w-]+)["']?\s*\))?/g)];
+      const pick = urls.find((m) => m[2] === "woff2") ?? urls[0];
+      if (!pick) continue;
+      const base = rule.parentStyleSheet?.href ?? document.baseURI;
+      const data = await toDataUrl(new URL(pick[1], base).href);
+      if (!data) continue;
+      const extra = ["font-weight", "font-style", "font-stretch", "unicode-range"]
+        .map((p) => style.getPropertyValue(p) && `${p}:${style.getPropertyValue(p)};`)
+        .join("");
+      parts.push(`@font-face{font-family:"${family}";src:url(${data})${pick[2] ? ` format("${pick[2]}")` : ""};${extra}font-display:block;}`);
+    }
+  }
+  // Jamais vide : une chaîne vide relancerait la lecture des @import par la bibliothèque.
+  return parts.join("\n") || "/* aucune police web */";
+}
+
 // La capture se fait sur une COPIE de la fenêtre, placée hors écran et ramenée
 // en position 0,0 : la fenêtre affichée n'est jamais modifiée, et le rendu ne
 // sort plus du cadre (les fenêtres Foundry sont positionnées par left/top).
@@ -56,7 +140,8 @@ async function screenshot(element) {
   holder.append(clone);
   document.body.append(holder);
   try {
-    return await domToWebp(clone, { quality: 0.85, scale: 1, width, height });
+    const cssText = await fontCss(clone);
+    return await domToWebp(clone, { quality: 0.85, scale: 1, width, height, font: { cssText } });
   } finally {
     holder.remove();
   }
