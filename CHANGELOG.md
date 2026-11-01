@@ -6,6 +6,11 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.16
+
+### Nouveautés
+- Le relais de signalement est en service : adresse par défaut `https://truchement.argannao.com`. Le bouton drapeau fonctionne sans aucune configuration.
+
 ## 0.2.15
 
 ### Nouveautés

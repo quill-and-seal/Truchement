@@ -7,7 +7,7 @@
 const ID = "truchement";
 
 // Adresse du relais par défaut (modifiable dans les réglages).
-export const REPORT_URL = "";
+export const REPORT_URL = "https://truchement.argannao.com";
 
 const SCREENSHOT_LIB = "https://cdn.jsdelivr.net/npm/modern-screenshot@4.6.8/dist/index.mjs";
 const SETTLE_MS = 1200; // le temps que la fiche se redessine et que l'interface soit traduite
