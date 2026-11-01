@@ -1,0 +1,21 @@
+{
+  "TRUCHEMENT": {
+    "Settings": {
+      "Enabled": {
+        "Name": "Automatic translation",
+        "Hint": "Translates documents into French when they are created."
+      },
+      "OnlyPlutonium": {
+        "Name": "Plutonium imports only",
+        "Hint": "Only translate documents created by Plutonium. Uncheck to translate every created document."
+      },
+      "ShowAltUnits": {
+        "Name": "Show distance equivalent",
+        "Hint": "Shows the distance in the opposite unit in small text (feet ↔ meters)."
+      }
+    },
+    "Notify": {
+      "Failed": "Truchement could not translate"
+    }
+  }
+}

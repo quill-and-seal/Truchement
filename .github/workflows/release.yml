@@ -1,0 +1,35 @@
+# À la publication d'une release (tag vX.Y.Z) : met à jour la version et
+# l'URL de téléchargement du manifeste, construit module.zip et attache
+# module.json + module.zip à la release.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mettre à jour le manifeste
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          VERSION="${TAG#v}"
+          jq --arg v "$VERSION" \
+             --arg d "https://github.com/$REPO/releases/download/$TAG/module.zip" \
+             '.version = $v | .download = $d' module.json > module.tmp && mv module.tmp module.json
+
+      - name: Construire l'archive
+        run: zip -r module.zip module.json LICENSE README.md src styles lang
+
+      - name: Attacher à la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" module.json module.zip --clobber

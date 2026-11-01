@@ -1,0 +1,21 @@
+{
+  "TRUCHEMENT": {
+    "Settings": {
+      "Enabled": {
+        "Name": "Traduction automatique",
+        "Hint": "Traduit en français les documents au moment de leur création."
+      },
+      "OnlyPlutonium": {
+        "Name": "Uniquement les imports Plutonium",
+        "Hint": "Ne traduit que les documents créés par Plutonium. Décocher pour traduire tout document créé."
+      },
+      "ShowAltUnits": {
+        "Name": "Afficher l'équivalent des distances",
+        "Hint": "Affiche en petit la distance dans l'unité opposée (pieds ↔ mètres)."
+      }
+    },
+    "Notify": {
+      "Failed": "Truchement n'a pas pu traduire"
+    }
+  }
+}
