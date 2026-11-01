@@ -3,7 +3,7 @@
 // (terme absent du dictionnaire) : la phrase passe alors à la couche suivante.
 
 import { ABILITIES, DAMAGE_TYPES, CONDITIONS, lookupNoun, article } from "./glossary.js";
-import { feetToMetersText, ordinal } from "./units.js";
+import { feetText, ordinal } from "./units.js";
 
 const DICE = String.raw`(\d+d\d+(?:\s*[+\-−]\s*\d+)?)`;
 const ABILITY = `(${Object.keys(ABILITIES).join("|")})`;
@@ -23,7 +23,7 @@ export const PATTERNS = [
       if (!s) return null;
       const e = s.g === "f" ? "e" : "";
       const on = { "that point": "ce point", you: "vous", it: "celui-ci" }[center.toLowerCase()];
-      return `Chaque créature située dans ${article(s)}${s.fr} de ${feetToMetersText(ft)} de rayon centré${e} sur ${on} effectue un jet de sauvegarde de ${ABILITIES[cap(ab.toLowerCase())]}.`;
+      return `Chaque créature située dans ${article(s)}${s.fr} de ${feetText(ft)} de rayon centré${e} sur ${on} effectue un jet de sauvegarde de ${ABILITIES[cap(ab.toLowerCase())]}.`;
     },
   },
   {

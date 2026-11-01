@@ -13,7 +13,7 @@ Chaque phrase descend quatre couches jusqu'à ce que l'une d'elles la traite :
 3. **Dictionnaire** — termes de jeu, expressions figées, genre des noms (`src/engine/glossary.js`)
 4. **Moteur neuronal** — secours pour la prose libre, termes protégés par marqueurs (à brancher)
 
-Les distances sont converties selon la convention de la VF (5 pieds = 1,5 m).
+Les distances restent dans l'unité du texte source (pieds).
 
 ## Tester
 
