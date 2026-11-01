@@ -50,8 +50,9 @@ api.stateOf(item);                  // "none", "fr" ou "en"
 
 ## Moteur de traduction
 
-Aucun dictionnaire : chaque phrase passe par trois couches.
+Chaque texte passe par les couches suivantes, dans l'ordre :
 
+1. **Glossaire** — correspondances fixes, prioritaires sur tout le reste (`data/glossaire.json`, voir ci-dessous).
 1. **Cache** — phrases déjà traduites, rempli automatiquement et conservé dans le navigateur (`src/nmt/client.js`).
 2. **Gabarits de règles** — phrases formulaires (jets de sauvegarde, dégâts, soins, montée en niveau, formules des blocs de stats) reconnues par regex et reconstruites par algorithme, avec accords et genre (`src/engine/patterns.js`).
 3. **Modèle neuronal** — tout le reste : prose, noms, fragments. Modèle Marian `opus-mt-en-fr` exécuté localement avec transformers.js, dans un worker pour ne pas figer Foundry (`src/nmt/worker.js`).
@@ -61,6 +62,15 @@ Au premier usage, le modèle (~75 Mo) est téléchargé une fois puis mis en cac
 Les jets en ligne (`[[/attack]]`, `[[/damage …]]`), les liens `@UUID[…]` et les balises HTML ne sont jamais modifiés ; seul leur libellé `{…}` est traduit.
 
 Les distances restent dans l'unité du texte source, avec l'équivalent dans l'unité opposée affiché en petit (calcul exact, 1 pied = 0,3048 m).
+
+## Glossaire
+
+`data/glossaire.json` contient les termes de jeu et libellés courants dont le modèle se trompe hors contexte :
+
+- **`termes`** — correspondance exacte d'un texte entier (`"Roll": "Jet"`), majuscules comprises, puis sans tenir compte de la casse ;
+- **`formules`** — libellés à variables (`"Roll {ability} Saving Throw": "Jet de sauvegarde de {ability}"`) ; les variables sont elles-mêmes traduites par le glossaire.
+
+Il s'applique au contenu (noms, libellés des jets en ligne, noms composés « X (Y) » partie par partie) comme à l'interface. Les corrections faites par **Alt+clic** dans Foundry passent avant le fichier ; pour qu'une correction profite à tous, ajoute-la au fichier dans le dépôt.
 
 ## Tester le moteur
 

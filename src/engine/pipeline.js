@@ -8,6 +8,7 @@
 // l'appelant : le worker transformers.js dans Foundry, un faux modèle en test.
 
 import { matchPattern, splitSuffix } from "./patterns.js";
+import { lookupGlossary } from "./glossary.js";
 import { feetText, metersText } from "./units.js";
 
 export const CACHE = new Map();
@@ -37,6 +38,8 @@ export function annotateUnits(text) {
 // Les gabarits passent avant le cache : une amélioration des gabarits
 // remplace une ancienne traduction du modèle gardée en cache.
 function resolveLocally(sentence) {
+  const g = lookupGlossary(sentence);
+  if (g) return { text: g, layer: "glossaire" };
   const pat = matchPattern(sentence);
   if (pat) return { text: pat.text, layer: `gabarit:${pat.id}` };
   if (CACHE.has(sentence)) return { text: CACHE.get(sentence), layer: "cache" };
@@ -106,7 +109,15 @@ export async function translateHtml(html, opts = {}) {
   return { html: parts.join(""), report };
 }
 
+// "Aberrant Spirit (Beholderkin)" : glossaire sur le nom entier, sinon chaque
+// partie séparément (le modèle traduit mal les parenthèses).
 export async function translateName(name, opts = {}) {
+  const m = name.match(/^(.+?)\s*\((.+)\)$/);
+  if (m && !lookupGlossary(name)) {
+    const [a, b] = await translateSegments([m[1], m[2]], opts);
+    if (a.layer === "non traduit" && b.layer === "non traduit") return null;
+    return `${a.text} (${b.text})`;
+  }
   const [r] = await translateSegments([name], opts);
   return r.layer === "non traduit" ? null : r.text;
 }

@@ -1,11 +1,12 @@
 // Banc d'essai : node test/run.mjs
+import { readFileSync } from "node:fs";
 // Textes de sorts au format du SRD 5.2 (CC-BY 4.0).
 //
 // Le vrai modèle tourne dans le navigateur (worker transformers.js). Ici on
 // branche un faux modèle qui marque les phrases « [NMT] … » : on vérifie
 // ce que les gabarits traitent seuls et ce qui part au modèle.
 
-import { translateHtml, translateName, CACHE } from "../src/engine/pipeline.js";
+import { translateHtml, translateName, translateSegments, CACHE } from "../src/engine/pipeline.js";
 
 let calls = 0;
 const fakeNmt = async (texts) => {
@@ -86,3 +87,20 @@ const multi = await translateHtml("<p>The spirit makes a number of attacks equal
 });
 console.log(`\n=== Multiattack ===\n${multi.html}`);
 assert(multi.html.endsWith("level (arrondi à l'inférieur).</p>") && !multi.html.includes("round down"), "la formule d'arrondi est retirée avant le modèle puis remise en français");
+
+// Glossaire (data/glossaire.json)
+
+import { setGlossary, setCorrectionsProvider } from "../src/engine/glossary.js";
+setGlossary(JSON.parse(readFileSync(new URL("../data/glossaire.json", import.meta.url))));
+const nmtG = async (t) => t.map((x) => `[NMT] ${x}`);
+const g1 = await translateName("Aberrant Spirit (Beholderkin)", { nmt: nmtG });
+const g2 = await translateName("Multiattack", { nmt: nmtG });
+const g3 = (await translateSegments(["Roll Strength Saving Throw", "Darkvision", "deep speech"], { nmt: nmtG })).map((r) => r.text);
+console.log(`\n=== Glossaire ===\n${g1} | ${g2} | ${g3.join(" | ")}`);
+assert(g1 === "Esprit aberrant ([NMT] Beholderkin)", "nom composé : partie connue par le glossaire, l'autre par le modèle");
+assert(g2 === "Attaques multiples", "nom du glossaire");
+assert(g3[0] === "Jet de sauvegarde de Force" && g3[1] === "Vision dans le noir" && g3[2] === "Profond", "formules et casse");
+setCorrectionsProvider(() => ({ Darkvision: "Vision nocturne" }));
+assert((await translateSegments(["Darkvision"], {}))[0].text === "Vision nocturne", "la correction du MJ passe avant le fichier");
+setCorrectionsProvider(() => ({}));
+console.log(process.exitCode ? "ÉCHEC" : "Glossaire : toutes les vérifications passent.");

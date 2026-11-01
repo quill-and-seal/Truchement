@@ -27,7 +27,7 @@ jobs:
              '.version = $v | .download = $d' module.json > module.tmp && mv module.tmp module.json
 
       - name: Construire l'archive
-        run: zip -r module.zip module.json LICENSE README.md CHANGELOG.md src styles lang
+        run: zip -r module.zip module.json LICENSE README.md CHANGELOG.md src styles lang data
 
       - name: Attacher à la release
         env:

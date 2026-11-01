@@ -9,6 +9,7 @@
 // 2. Les gabarits et le modèle neuronal, pour ce qui n'est pas couvert.
 
 import { translateSegments } from "./engine/pipeline.js";
+import { lookupGlossary } from "./engine/glossary.js";
 
 const ID = "truchement";
 
@@ -231,11 +232,6 @@ function collect(root) {
 // sans attendre le modèle, quand la fiche redessine un élément.
 const MEMO = new Map();
 
-// Corrections saisies par le MJ (Alt+clic) : prioritaires sur tout le reste.
-let corrections = () => ({});
-export function setCorrectionsProvider(fn) {
-  corrections = fn;
-}
 
 // Nœud texte → texte anglais d'origine (pour la correction à la main).
 const ORIGINAL = new WeakMap();
@@ -292,6 +288,7 @@ function remember(en, fr) {
 // Traduit les libellés d'interface affichés dans `root`. `opts` : options du pipeline (nmt…).
 // `isActive()` : faux dès que la fiche repasse en EN, pour ne rien appliquer après coup.
 export async function translateInterface(root, opts, isActive = () => true) {
+  await opts?.ready;
   await loadInterfaceTranslations();
   if (!isActive()) return;
   const targets = collect(root);
@@ -303,7 +300,8 @@ export async function translateInterface(root, opts, isActive = () => true) {
   for (const t of targets) {
     for (const u of unitsOf(t.parts)) {
       if (tr.has(u)) continue;
-      const fr = corrections()[u] ?? MEMO.get(u) ?? lookupOfficial(u);
+      // Glossaire (corrections du MJ comprises), puis mémoire, puis traductions officielles.
+      const fr = lookupGlossary(u) ?? MEMO.get(u) ?? lookupOfficial(u);
       if (fr) {
         tr.set(u, fr);
         remember(u, fr);

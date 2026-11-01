@@ -6,6 +6,13 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.12
+
+### Nouveautés
+- Glossaire `data/glossaire.json` (177 termes, 6 formules) prioritaire sur le modèle : interface de fiche, déplacements et sens, tailles, types de créatures, alignements, caractéristiques, compétences, dégâts, états, langues, capacités courantes.
+- Noms composés « X (Y) » traduits partie par partie.
+- Les corrections Alt+clic s'appliquent aussi au contenu (noms, libellés).
+
 ## 0.2.11
 
 ### Corrections

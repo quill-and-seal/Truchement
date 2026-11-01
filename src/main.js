@@ -3,12 +3,12 @@
 // met à jour le document (l'original est conservé dans les flags).
 
 import { translateHtml, translateName, CACHE } from "./engine/pipeline.js";
+import { setGlossary, setCorrectionsProvider, glossarySize } from "./engine/glossary.js";
 import { nmt, setCallbacks, loadCache, saveCache } from "./nmt/client.js";
 import {
   watchInterface,
   unwatchInterface,
   loadInterfaceTranslations,
-  setCorrectionsProvider,
   translatedLabelAt,
   applyCorrection,
   initTooltips,
@@ -81,6 +81,7 @@ Hooks.once("ready", () => {
   applyAltUnitsClass(setting("showAltUnits"));
   loadCache(CACHE);
   setCorrectionsProvider(() => setting("corrections") ?? {});
+  OPTS.ready = loadGlossary();
   initTooltips();
   if (setting("translateInterface")) loadInterfaceTranslations();
 
@@ -159,8 +160,21 @@ async function translateFields(doc, fields) {
   return update;
 }
 
+// Glossaire livré avec le module (data/glossaire.json).
+async function loadGlossary() {
+  try {
+    const res = await fetch(foundry.utils.getRoute(`modules/${ID}/data/glossaire.json`));
+    if (res.ok) setGlossary(await res.json());
+    const { termes, formules } = glossarySize();
+    console.log(`${ID} | glossaire : ${termes} termes, ${formules} formules`);
+  } catch (err) {
+    console.warn(`${ID} | glossaire illisible`, err);
+  }
+}
+
 // Renvoie le nombre de documents modifiés.
 export async function translateDocument(doc) {
+  await OPTS.ready;
   try {
     return await translateDocumentInner(doc);
   } finally {
