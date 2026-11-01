@@ -26,6 +26,8 @@ La bascule s'applique aussi aux objets d'un acteur et aux pages d'un journal, sa
 
 **Maj+clic** sur le badge : retraduire depuis la version d'origine (utile après une mise à jour du module).
 
+Truchement traduit le **contenu** des documents (noms, descriptions, textes libres des traits comme les langues ou sens spéciaux). Les libellés de l'interface des fiches (« Speed », « Darkvision », types de dégâts, infobulles…) relèvent de la langue de Foundry et des modules de traduction française du cœur et du système dnd5e.
+
 Réglages :
 
 - **Traduction automatique** — active ou coupe la traduction à l'import.

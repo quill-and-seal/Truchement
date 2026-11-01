@@ -91,7 +91,16 @@ function shouldTranslate(doc, userId) {
 // Champs HTML à traduire selon le type de document.
 const HTML_FIELDS = {
   Item: ["system.description.value"],
-  Actor: ["system.details.biography.value"],
+  Actor: [
+    "system.details.biography.value",
+    // Textes libres des traits (le reste de la fiche est traduit par Foundry/dnd5e)
+    "system.traits.languages.custom",
+    "system.attributes.senses.special",
+    "system.traits.di.custom",
+    "system.traits.dr.custom",
+    "system.traits.dv.custom",
+    "system.traits.ci.custom",
+  ],
 };
 
 async function translateFields(doc, fields) {
