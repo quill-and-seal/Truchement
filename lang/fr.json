@@ -27,8 +27,8 @@
     },
     "Badge": {
       "None": "Truchement : non traduit — cliquer pour traduire",
-      "Fr": "Truchement : traduction affichée — cliquer pour voir l'original",
-      "En": "Truchement : version d'origine affichée — cliquer pour revenir à la traduction"
+      "Fr": "Truchement : traduction affichée — clic : voir l'original · Maj+clic : retraduire",
+      "En": "Truchement : version d'origine affichée — clic : revenir à la traduction · Maj+clic : retraduire"
     }
   }
 }

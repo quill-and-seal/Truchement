@@ -68,7 +68,7 @@ Hooks.once("ready", () => {
     },
   });
 
-  game.modules.get(ID).api = { translateDocument, toggleDocument, revertDocument, stateOf, translateHtml };
+  game.modules.get(ID).api = { translateDocument, toggleDocument, retranslateDocument, revertDocument, stateOf, translateHtml };
 });
 
 function applyAltUnitsClass(show) {
@@ -227,6 +227,19 @@ export async function toggleDocument(doc) {
   await doc.update(swapData(doc, target) ?? { [`flags.${ID}.showing`]: target });
 }
 
+// Repart du texte d'origine et relance la traduction (après une amélioration
+// des gabarits ou du modèle). Les marqueurs sont remis à false plutôt que
+// supprimés, ce qui suffit à relancer la traduction.
+export async function retranslateDocument(doc) {
+  if (stateOf(doc) === "fr") await toggleDocument(doc);
+  const reset = { [`flags.${ID}.translated`]: false, [`flags.${ID}.showing`]: null };
+  const children = childrenOf(doc);
+  const updates = children.docs.filter((c) => c.flags?.[ID]?.translated).map((c) => ({ _id: c.id, ...reset }));
+  if (updates.length) await doc.updateEmbeddedDocuments(children.name, updates);
+  await doc.update(reset);
+  return onTranslateClick(doc);
+}
+
 // Compatibilité : revenir à l'original.
 export async function revertDocument(doc) {
   if (stateOf(doc) === "fr") await toggleDocument(doc);
@@ -319,7 +332,9 @@ Hooks.on("renderApplicationV2", (app, element) => {
     btn.disabled = true;
     btn.classList.add("busy");
     try {
-      await toggleDocument(doc);
+      // Maj+clic : retraduire depuis l'original.
+      if (ev.shiftKey && state !== "none") await retranslateDocument(doc);
+      else await toggleDocument(doc);
     } catch (err) {
       console.error(`${ID} | échec de la bascule pour « ${doc.name} »`, err);
       ui.notifications.error(`${t("Notify.Failed")} : ${doc.name}`);

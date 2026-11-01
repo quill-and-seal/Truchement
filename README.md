@@ -24,6 +24,8 @@ https://github.com/quill-and-seal/Truchement/releases/latest/download/module.jso
 
 La bascule s'applique aussi aux objets d'un acteur et aux pages d'un journal, sans relancer le modèle. Seul le MJ peut cliquer.
 
+**Maj+clic** sur le badge : retraduire depuis la version d'origine (utile après une mise à jour du module).
+
 Réglages :
 
 - **Traduction automatique** — active ou coupe la traduction à l'import.
@@ -44,12 +46,12 @@ api.stateOf(item);                  // "none", "fr" ou "en"
 Aucun dictionnaire : chaque phrase passe par trois couches.
 
 1. **Cache** — phrases déjà traduites, rempli automatiquement et conservé dans le navigateur (`src/nmt/client.js`).
-2. **Gabarits de règles** — phrases formulaires (jets de sauvegarde, dégâts, soins, montée en niveau) reconnues par regex et reconstruites par algorithme, avec accords et genre (`src/engine/patterns.js`).
+2. **Gabarits de règles** — phrases formulaires (jets de sauvegarde, dégâts, soins, montée en niveau, formules des blocs de stats) reconnues par regex et reconstruites par algorithme, avec accords et genre (`src/engine/patterns.js`).
 3. **Modèle neuronal** — tout le reste : prose, noms, fragments. Modèle Marian `opus-mt-en-fr` exécuté localement avec transformers.js, dans un worker pour ne pas figer Foundry (`src/nmt/worker.js`).
 
 Au premier usage, le modèle (~75 Mo) est téléchargé une fois puis mis en cache par le navigateur. Si le modèle est indisponible, seules les phrases de règles sont traduites.
 
-Les jets en ligne (`[[/attack]]`, `[[/damage …]]`), les liens `@UUID[…]` et les balises HTML ne sont jamais envoyés au modèle.
+Les jets en ligne (`[[/attack]]`, `[[/damage …]]`), les liens `@UUID[…]` et les balises HTML ne sont jamais modifiés ; seul leur libellé `{…}` est traduit.
 
 Les distances restent dans l'unité du texte source, avec l'équivalent dans l'unité opposée affiché en petit (calcul exact, 1 pied = 0,3048 m).
 

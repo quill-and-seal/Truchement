@@ -27,8 +27,8 @@
     },
     "Badge": {
       "None": "Truchement: not translated — click to translate",
-      "Fr": "Truchement: translation shown — click to see the original",
-      "En": "Truchement: original shown — click to go back to the translation"
+      "Fr": "Truchement: translation shown — click: see the original · Shift+click: retranslate",
+      "En": "Truchement: original shown — click: back to the translation · Shift+click: retranslate"
     }
   }
 }

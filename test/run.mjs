@@ -71,3 +71,11 @@ assert(eye.html.includes('150 pieds <span class="truchement-alt">'), "l'équival
 const none = await translateHtml("<p>Plain text.</p>");
 assert(none.report[0].layer === "non traduit", "sans modèle, le texte reste tel quel");
 console.log(`Cache : ${CACHE.size} entrées. ${process.exitCode ? "" : "Toutes les vérifications passent."}`);
+
+// Bloc de stats réel (Eye Ray importé par Plutonium)
+const block = `<p><em>Ranged Attack Roll:</em> [[/attack]]{Bonus equals your spell attack modifier}, range 150 ft. <em>Hit:</em> [[/damage 1d8 + 3 + @item.level type=psychic]]{1d8 + 3 + the spell's level} Psychic damage.</p>`;
+const br = await translateHtml(block, OPTS);
+console.log(`\n=== Bloc de stats ===\n${br.html}`);
+for (const r of br.report) console.log(`  [${r.layer}] ${r.source} → ${r.text}`);
+assert(!br.report.some((r) => r.layer === "neuronal"), "le bloc de stats est entièrement couvert par les gabarits");
+assert(br.html.includes("[[/attack]]{Bonus égal") && br.html.includes("@item.level type=psychic]]{1d8 + 3 + le niveau du sort}"), "les libellés des jets en ligne sont traduits, la commande reste intacte");

@@ -34,10 +34,12 @@ export function annotateUnits(text) {
 }
 
 // Résout une phrase sans modèle (cache ou gabarit), ou renvoie null.
+// Les gabarits passent avant le cache : une amélioration des gabarits
+// remplace une ancienne traduction du modèle gardée en cache.
 function resolveLocally(sentence) {
-  if (CACHE.has(sentence)) return { text: CACHE.get(sentence), layer: "cache" };
   const pat = matchPattern(sentence);
   if (pat) return { text: pat.text, layer: `gabarit:${pat.id}` };
+  if (CACHE.has(sentence)) return { text: CACHE.get(sentence), layer: "cache" };
   return null;
 }
 
@@ -73,7 +75,15 @@ export async function translateHtml(html, opts = {}) {
   const sentences = [];
 
   parts.forEach((part, i) => {
-    if (!part || isProtected(part) || !part.trim()) return;
+    if (!part || !part.trim()) return;
+    if (isProtected(part)) {
+      // Jet en ligne ou lien avec libellé : on garde la commande, on traduit le libellé.
+      const m = part.match(/^((?:\[\[[^\]]*\]\]|[@&]\w+\[[^\]]*\])\{)([^}]+)(\})$/);
+      if (!m) return;
+      slots.push({ i, lead: m[1], trail: m[3], from: sentences.length, n: 1 });
+      sentences.push(m[2]);
+      return;
+    }
     const list = splitSentences(part.trim());
     slots.push({ i, lead: part.match(/^\s*/)[0], trail: part.match(/\s*$/)[0], from: sentences.length, n: list.length });
     sentences.push(...list);

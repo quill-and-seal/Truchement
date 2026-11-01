@@ -81,6 +81,56 @@ export const PATTERNS = [
       return `Choisissez ${article(n)}${n.fr} que vous pouvez voir dans la portée du sort.`;
     },
   },
+
+  // --- Blocs de stats : formules courtes, souvent isolées par la mise en forme
+  // ou les jets en ligne. Le modèle les traduit mal sans contexte.
+  {
+    id: "attack-roll",
+    re: p(String.raw`(Melee or Ranged|Melee|Ranged) Attack Roll\s*:?`),
+    build: ([, kind]) =>
+      `Jet d'attaque ${{ "melee or ranged": "au corps à corps ou à distance", melee: "au corps à corps", ranged: "à distance" }[kind.toLowerCase()]} :`,
+  },
+  {
+    id: "attack-2014",
+    re: p(String.raw`(Melee|Ranged) (Weapon|Spell) Attack\s*:?`),
+    build: ([, kind, what]) =>
+      `Attaque ${what.toLowerCase() === "weapon" ? "d'arme" : "de sort"} ${kind.toLowerCase() === "melee" ? "au corps à corps" : "à distance"} :`,
+  },
+  {
+    id: "outcome-label",
+    re: p(String.raw`(Hit or Miss|Hit|Miss|Failure or Success|Failure|Success|Trigger|Response)\s*:?`),
+    build: ([, w]) =>
+      `${{ "hit or miss": "Touché ou échec", hit: "Touché", miss: "Échec", "failure or success": "Échec ou réussite", failure: "Échec", success: "Réussite", trigger: "Déclencheur", response: "Réponse" }[w.toLowerCase()]} :`,
+  },
+  {
+    id: "save-label",
+    re: p(String.raw`${ABILITY} Saving Throw\s*:?`),
+    build: ([, ab]) => `Jet de sauvegarde de ${ABILITIES[cap(ab.toLowerCase())]} :`,
+  },
+  {
+    id: "range-reach",
+    re: p(String.raw`(,?)\s*(range|reach) (\d+)(?:\/(\d+))? ft\.?(,?)`),
+    build: ([, lead, kind, a, b, trail]) => {
+      const word = kind.toLowerCase() === "range" ? "portée" : "allonge";
+      const dist = b ? `${a}/${b} pieds` : feetText(a);
+      return `${lead ? ", " : ""}${word} ${dist}${trail ? "," : "."}`;
+    },
+  },
+  {
+    id: "damage-typed",
+    re: p(String.raw`(?:(\d+) \(${DICE}\) )?${DAMAGE} damage(\.?)`),
+    build: ([, avg, dice, type, dot]) => `${avg ? `${avg} (${dice}) ` : ""}${dmg(type)}${dot}`,
+  },
+  {
+    id: "spell-attack-bonus",
+    re: p(String.raw`Bonus equals your spell attack modifier`),
+    build: () => "Bonus égal à votre modificateur d'attaque des sorts",
+  },
+  {
+    id: "spell-level-dice",
+    re: p(String.raw`${DICE}((?:\s*\+\s*\d+)?)\s*\+\s*the spell's level`),
+    build: ([, dice, plus]) => `${dice}${plus.replace(/\s+/g, " ")} + le niveau du sort`,
+  },
 ];
 
 export function matchPattern(sentence) {
