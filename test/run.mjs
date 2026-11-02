@@ -119,3 +119,16 @@ const p2 = (await translateSegments(["You have advantage on the next attack roll
 console.log(`marqueurs perdus → 2e envoi : ${sent2[1]}`);
 assert(sent2.length === 2 && sent2[1].includes("avantage") && sent2[1].includes("jet d'attaque"), "marqueur perdu : renvoi avec le français écrit dans la phrase");
 console.log(process.exitCode ? "ÉCHEC" : "Expressions : toutes les vérifications passent.");
+
+// Texte déjà en français (compendium traduit) : jamais renvoyé au modèle
+const sentFr = [];
+const spy = async (t) => (sentFr.push(...t), t.map((x) => `[NMT] ${x}`));
+const mixed = await translateHtml(
+  "<p>Vous touchez une créature, qui récupère 2d8 points de vie.</p><p>The spirit makes a number of attacks.</p>",
+  { nmt: spy },
+);
+console.log(`\n=== Déjà en français ===\n${mixed.html}\nenvoyé au modèle : ${JSON.stringify(sentFr)}`);
+assert(mixed.html.includes("Vous touchez une créature, qui récupère 2d8 points de vie.") && sentFr.length === 1 && sentFr[0].startsWith("The spirit"), "les phrases françaises restent telles quelles, seules les anglaises partent au modèle");
+assert((await translateName("Épée courte", { nmt: spy }))?.includes("Épée courte") || (await translateName("Épée courte", { nmt: spy })) === "Épée courte", "un nom déjà français n'est pas retraduit");
+assert(!sentFr.includes("Épée courte"), "le nom français n'est pas envoyé au modèle");
+console.log(process.exitCode ? "ÉCHEC" : "Déjà en français : toutes les vérifications passent.");

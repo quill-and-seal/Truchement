@@ -6,6 +6,15 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.21
+
+### Corrections
+- **Le français n'est plus retraduit en français.** Détection de langue (mots-outils, accents, orthographe) :
+  - un document déjà en français (compendium traduit, saisie en français) est laissé tel quel ;
+  - les documents traduits par Babele (`flags.babele.translated`) sont ignorés ;
+  - dans un document mélangé, les phrases déjà en français ne passent pas par le modèle ;
+  - un nom présent parmi les traductions du glossaire est reconnu comme français.
+
 ## 0.2.20
 
 ### Corrections

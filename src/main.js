@@ -3,7 +3,8 @@
 // met à jour le document (l'original est conservé dans les flags).
 
 import { translateHtml, translateName, CACHE } from "./engine/pipeline.js";
-import { setGlossary, setCorrectionsProvider, glossarySize } from "./engine/glossary.js";
+import { setGlossary, setCorrectionsProvider, glossarySize, isKnownFrench } from "./engine/glossary.js";
+import { detectLang } from "./engine/lang.js";
 import { reportDocument, REPORT_URL } from "./report.js";
 import { nmt, setCallbacks, loadCache, saveCache } from "./nmt/client.js";
 import {
@@ -150,7 +151,24 @@ const HTML_FIELDS = {
 // rien n'est écrit, la traduction sera relancée.
 const STALE = Symbol("stale");
 
+// Le document est-il déjà en français ? (compendium traduit, Babele, saisie FR)
+// La langue des descriptions décide ; sans description, celle du nom.
+function alreadyFrench(doc, fields) {
+  if (doc.flags?.babele?.translated) return "traduit par Babele";
+  const text = fields.map((p) => foundry.utils.getProperty(doc, p)).filter((v) => typeof v === "string").join(" ");
+  const lang = detectLang(text);
+  if (lang === "fr") return "description en français";
+  if (lang === "en") return null;
+  if (isKnownFrench(doc.name) || detectLang(doc.name) === "fr") return "nom en français";
+  return null;
+}
+
 async function translateFields(doc, fields) {
+  const french = alreadyFrench(doc, fields);
+  if (french) {
+    console.log(`${ID} | « ${doc.name} » ignoré : déjà en français (${french})`);
+    return null;
+  }
   const update = {};
   const original = {};
   // Photo des textes source, pour vérifier à la fin qu'ils n'ont pas bougé.

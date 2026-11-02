@@ -52,6 +52,8 @@ api.stateOf(item);                  // "none", "fr" ou "en"
 
 ## Moteur de traduction
 
+Les textes déjà en français ne sont jamais retraduits : un document en français (compendium traduit, Babele, saisie) est ignoré, et dans un document mélangé seules les phrases anglaises sont traduites (`src/engine/lang.js`).
+
 Chaque texte passe par les couches suivantes, dans l'ordre :
 
 1. **Glossaire** — correspondances fixes, prioritaires sur tout le reste (`data/glossaire.json`, voir ci-dessous).

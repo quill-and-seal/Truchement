@@ -10,6 +10,8 @@
 import { matchPattern, splitSuffix } from "./patterns.js";
 import { lookupGlossary, maskExpressions, unmaskExpressions, inlineExpressions } from "./glossary.js";
 import { feetText, metersText } from "./units.js";
+import { detectLang } from "./lang.js";
+import { isKnownFrench } from "./glossary.js";
 
 export const CACHE = new Map();
 
@@ -42,6 +44,8 @@ function resolveLocally(sentence) {
   if (g) return { text: g, layer: "glossaire" };
   const pat = matchPattern(sentence);
   if (pat) return { text: pat.text, layer: `gabarit:${pat.id}` };
+  // Déjà en français (compendium traduit, texte saisi en français…) : on n'y touche pas.
+  if (isKnownFrench(sentence) || detectLang(sentence) === "fr") return { text: sentence, layer: "déjà français" };
   if (CACHE.has(sentence)) return { text: CACHE.get(sentence), layer: "cache" };
   return null;
 }

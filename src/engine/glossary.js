@@ -7,6 +7,7 @@
 
 const TERMS = new Map();
 const TERMS_CI = new Map();
+const FRENCH_VALUES = new Set(); // traductions françaises connues (pour reconnaître un texte déjà en français)
 const FORMULAS = []; // { re, fr, names }
 const EXPRESSIONS = []; // { re, fr } — triées de la plus longue à la plus courte
 
@@ -20,12 +21,14 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function setGlossary(data = {}) {
   TERMS.clear();
   TERMS_CI.clear();
+  FRENCH_VALUES.clear();
   FORMULAS.length = 0;
   EXPRESSIONS.length = 0;
   for (const [en, fr] of Object.entries(data.termes ?? {})) {
     if (typeof fr !== "string" || !fr) continue;
     TERMS.set(en, fr);
     TERMS_CI.set(en.toLowerCase(), fr);
+    FRENCH_VALUES.add(fr.toLowerCase());
   }
   for (const [en, fr] of Object.entries(data.formules ?? {})) {
     const names = [];
@@ -35,6 +38,12 @@ export function setGlossary(data = {}) {
   const expr = Object.entries(data.expressions ?? {}).filter(([, fr]) => typeof fr === "string" && fr);
   expr.sort((a, b) => b[0].length - a[0].length);
   for (const [en, fr] of expr) EXPRESSIONS.push({ re: new RegExp(`\\b${escapeRe(en)}\\b`, "gi"), fr });
+}
+
+// Vrai si le texte est une traduction française du glossaire (et pas aussi un terme anglais).
+export function isKnownFrench(text) {
+  const t = String(text ?? "").trim().toLowerCase();
+  return FRENCH_VALUES.has(t) && !TERMS_CI.has(t);
 }
 
 export function glossarySize() {
