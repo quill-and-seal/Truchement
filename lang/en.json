@@ -25,7 +25,7 @@
     "Notify": {
       "Failed": "Truchement could not translate",
       "Done": "Translation done",
-      "Nothing": "Nothing recognized to translate",
+      "Nothing": "No text to translate in the sheet, only the interface switches to French",
       "Downloading": "Truchement: downloading the translation model (~75 MB, once)…",
       "Ready": "Truchement: translation model ready",
       "ModelError": "Truchement: translation model unavailable, only rule sentences are translated (see console)."

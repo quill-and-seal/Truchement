@@ -221,7 +221,13 @@ async function loadGlossary() {
 export async function translateDocument(doc) {
   await OPTS.ready;
   try {
-    return await translateDocumentInner(doc);
+    const n = await translateDocumentInner(doc);
+    // Rien à traduire dans le contenu (nom propre, fiche vide, texte déjà en
+    // français) : la fiche passe quand même sur FR pour traduire l'interface.
+    if (n === 0 && stateOf(doc) === "none") {
+      await doc.update({ [`flags.${ID}.translated`]: true, [`flags.${ID}.showing`]: "fr" });
+    }
+    return n;
   } finally {
     saveCache(CACHE);
   }
@@ -404,7 +410,7 @@ async function onTranslateClick(doc) {
     const n = await translateDocument(doc);
     if (n === STALE) return scheduleTranslate(doc);
     if (n) ui.notifications.info(`${t("Notify.Done")} : ${doc.name} (${n})`);
-    else ui.notifications.warn(`${t("Notify.Nothing")} : ${doc.name}`);
+    else ui.notifications.info(`${t("Notify.Nothing")} : ${doc.name}`);
   } catch (err) {
     console.error(`${ID} | échec de traduction pour « ${doc.name} »`, err);
     ui.notifications.error(`${t("Notify.Failed")} : ${doc.name}`);

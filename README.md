@@ -18,7 +18,7 @@ https://github.com/quill-and-seal/Truchement/releases/latest/download/module.jso
 
 **Badge d'état** dans l'en-tête de chaque fiche (acteur, objet, journal) :
 
-- grisé : non traduit — un clic lance la traduction ;
+- grisé : non traduit — un clic lance la traduction (si la fiche n'a aucun texte à traduire, elle passe quand même sur FR pour traduire l'interface) ;
 - **FR** (vert) : traduction affichée — un clic affiche la version d'origine ;
 - **EN** (orange) : version d'origine affichée — un clic revient à la traduction.
 

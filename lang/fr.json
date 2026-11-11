@@ -25,7 +25,7 @@
     "Notify": {
       "Failed": "Truchement n'a pas pu traduire",
       "Done": "Traduction terminée",
-      "Nothing": "Rien de reconnu à traduire",
+      "Nothing": "Aucun texte à traduire dans la fiche, seule l'interface passe en français",
       "Downloading": "Truchement : téléchargement du modèle de traduction (~75 Mo, une seule fois)…",
       "Ready": "Truchement : modèle de traduction prêt",
       "ModelError": "Truchement : modèle de traduction indisponible, seules les phrases de règles sont traduites (voir la console)."

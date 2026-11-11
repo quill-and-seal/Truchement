@@ -6,6 +6,11 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.22
+
+### Corrections
+- **Les fiches sans texte à traduire passent quand même en FR.** Une fiche de personnage vide ou au nom propre (« Kallias »), ou dont tout le contenu est déjà en français, restait sur « non traduit » avec l'avertissement « Rien de reconnu à traduire », et l'interface (compétences, sauvegardes, onglets…) n'était donc jamais traduite. Le badge passe maintenant sur **FR** et l'interface est traduite ; le message devient une simple information.
+
 ## 0.2.21
 
 ### Corrections
