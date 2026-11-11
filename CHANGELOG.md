@@ -6,6 +6,11 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.23
+
+### Changements
+- **Les compendiums déjà traduits sont ignorés.** Un objet, un acteur ou une page qui vient d'un compendium traduit n'est plus touché, même si la traduction n'est que partielle (seulement le nom, par exemple). Un compendium est reconnu comme traduit s'il passe par Babele, si les noms de son index sont en français, ou dès qu'un de ses documents contient un champ en français. Vaut aussi pour les objets embarqués d'un acteur.
+
 ## 0.2.22
 
 ### Corrections

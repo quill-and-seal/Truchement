@@ -153,8 +153,56 @@ const STALE = Symbol("stale");
 
 // Le document est-il déjà en français ? (compendium traduit, Babele, saisie FR)
 // La langue des descriptions décide ; sans description, celle du nom.
+// --- Compendiums déjà traduits ----------------------------------------------
+// Un document qui vient d'un compendium traduit (même en partie) est ignoré
+// en entier : on ne touche pas au travail de quelqu'un d'autre.
+
+const PACK_LANG = new Map(); // id du compendium → "fr" | "en" | null
+
+function sourcePackId(doc) {
+  const src = doc._stats?.compendiumSource ?? doc.flags?.core?.sourceId;
+  if (typeof src !== "string" || !src.startsWith("Compendium.")) return null;
+  return src.split(".").slice(1, 3).join(".");
+}
+
+// Langue d'un compendium, d'après les noms de son index (assez de mots pour trancher).
+function packLang(packId) {
+  if (PACK_LANG.has(packId)) return PACK_LANG.get(packId);
+  let lang = null;
+  try {
+    const babele = game.babele?.translations ?? game.babele?.packs;
+    const mapped = Array.isArray(babele)
+      ? babele.some((tr) => tr?.collection === packId)
+      : typeof babele?.has === "function" && babele.has(packId);
+    if (mapped) lang = "fr";
+    else {
+      const names = [...(game.packs.get(packId)?.index ?? [])].slice(0, 200).map((e) => e.name).join(" ");
+      lang = detectLang(names);
+    }
+  } catch (err) {
+    console.warn(`${ID} | langue du compendium ${packId} indéterminée`, err);
+  }
+  PACK_LANG.set(packId, lang);
+  return lang;
+}
+
+function fromTranslatedCompendium(doc, fields) {
+  const packId = sourcePackId(doc);
+  if (!packId) return null;
+  if (packLang(packId) === "fr") return `compendium traduit (${packId})`;
+  // Traduction partielle : un seul champ en français suffit.
+  const pieces = [doc.name, ...fields.map((p) => foundry.utils.getProperty(doc, p))].filter((v) => typeof v === "string" && v);
+  if (pieces.some((v) => isKnownFrench(v) || detectLang(v) === "fr")) {
+    PACK_LANG.set(packId, "fr");
+    return `compendium en partie traduit (${packId})`;
+  }
+  return null;
+}
+
 function alreadyFrench(doc, fields) {
-  if (doc.flags?.babele?.translated) return "traduit par Babele";
+  if (doc.flags?.babele?.translated || doc.flags?.babele?.hasTranslation) return "traduit par Babele";
+  const compendium = fromTranslatedCompendium(doc, fields);
+  if (compendium) return compendium;
   const text = fields.map((p) => foundry.utils.getProperty(doc, p)).filter((v) => typeof v === "string").join(" ");
   const lang = detectLang(text);
   if (lang === "fr") return "description en français";
