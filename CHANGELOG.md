@@ -6,6 +6,13 @@ Numérotation : le dernier chiffre change pour les ajouts et corrections, le chi
 
 Lien du manifeste : https://github.com/quill-and-seal/Truchement/releases/latest/download/module.json
 
+## 0.2.24
+
+### Corrections
+- **Truchement ne bloque plus les imports de Plutonium en plusieurs étapes** (liste des sorts d'un magicien dans le Charactermancer, montée de niveau…). Pendant les choix, la fiche restait immobile plus d'1,5 s : Truchement traduisait et renommait les objets, et Plutonium ne les retrouvait plus par leur nom anglais. Désormais :
+  - rien n'est traduit tant qu'une fenêtre de Plutonium est ouverte ; la traduction part à sa fermeture ;
+  - un objet ajouté à un acteur (sorts, aptitudes) n'est plus traduit seul : l'acteur entier est traduit une fois les ajouts terminés, sans retraduire ce qui l'était déjà.
+
 ## 0.2.23
 
 ### Changements

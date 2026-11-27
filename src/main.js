@@ -292,7 +292,8 @@ async function translateDocumentInner(doc) {
 }
 
 async function translateActor(actor) {
-  const update = await translateFields(actor, HTML_FIELDS.Actor);
+  // Acteur déjà traduit (objets ajoutés ensuite) : seuls les nouveaux objets sont traités.
+  const update = actor.getFlag(ID, "translated") ? null : await translateFields(actor, HTML_FIELDS.Actor);
   if (update === STALE) return STALE;
   if (update) await actor.update(update);
   let n = update ? 1 : 0;
@@ -409,10 +410,25 @@ export async function revertDocument(doc) {
 const QUIET_MS = 1500;
 const PENDING = new Map(); // uuid → { doc, timer }
 
+// Une fenêtre de Plutonium est-elle ouverte (Charactermancer, choix des sorts,
+// importeur…) ? Tant que c'est le cas, on ne touche à rien : Plutonium retrouve
+// ses objets par leur nom anglais entre deux étapes.
+const PLUTONIUM_WINDOW = /plut|charactermancer|importer|import-list/i;
+function plutoniumBusy() {
+  const apps = [...Object.values(ui.windows ?? {}), ...(foundry.applications?.instances?.values?.() ?? [])];
+  return apps.some((app) => {
+    if (app?.document) return false; // fiches d'acteur ou d'objet
+    const el = app?.element?.[0] ?? app?.element;
+    const text = [app?.constructor?.name, app?.id, app?.options?.id, el?.id, el?.className].filter((v) => typeof v === "string").join(" ");
+    return PLUTONIUM_WINDOW.test(text);
+  });
+}
+
 function scheduleTranslate(doc) {
   const entry = PENDING.get(doc.uuid);
   clearTimeout(entry?.timer);
   const timer = setTimeout(async () => {
+    if (plutoniumBusy()) return scheduleTranslate(doc); // on retentera à la fermeture
     PENDING.delete(doc.uuid);
     try {
       const n = await translateDocument(doc);
@@ -435,6 +451,9 @@ function bumpPending(doc) {
 function onCreate(doc, _options, userId) {
   if (doc.parent && PENDING.has(doc.parent.uuid)) return bumpPending(doc); // traité avec son parent
   if (!shouldTranslate(doc, userId)) return;
+  // Objet ajouté à un acteur (sorts du Charactermancer…) : on traduit l'acteur
+  // entier une fois les ajouts terminés, plutôt que chaque objet à part.
+  if (doc.parent?.documentName === "Actor") return scheduleTranslate(doc.parent);
   scheduleTranslate(doc);
 }
 
